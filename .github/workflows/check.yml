@@ -21,6 +21,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: catalog
+          persist-credentials: false
 
       - name: The pull request
         uses: actions/checkout@v4

@@ -107,7 +107,13 @@ final readonly class PullRequestCheck
             $problems[] = \sprintf('%s: %s is not an owner of the vendor "%s" (vendors.yaml).', $directory, $author, $vendor);
         }
 
-        $problems = [...$problems, ...$this->checkFiles($root.'/'.$directory, $directory)];
+        // Nothing is read through a link: the reader would follow it out of the checkout, and a
+        // problem quoting what it read would publish a file of the runner in the check's log.
+        $links = self::links($root, $directory);
+        if ([] !== $links) {
+            return [...$problems, ...$links];
+        }
+        $problems = [...$problems, ...self::checkSize($root.'/'.$directory, $directory)];
 
         $newer = array_filter(
             $listed,
@@ -131,35 +137,51 @@ final readonly class PullRequestCheck
     }
 
     /**
-     * Symbolic links are refused (git stores them, and they could point outside the package);
-     * the size is the sum of every file.
+     * Symbolic links are refused (git stores them, and they could point outside the checkout):
+     * the version directory and each directory above it up to the root, and everything inside.
      *
      * @return list<string>
      */
-    private function checkFiles(string $path, string $directory): array
+    private static function links(string $root, string $directory): array
     {
-        if (!is_dir($path) || is_link($path)) {
-            return [\sprintf('%s: Not a directory.', $directory)];
+        $path = $root;
+        foreach (explode('/', $directory) as $segment) {
+            $path .= '/'.$segment;
+            if (is_link($path) || !is_dir($path)) {
+                return [\sprintf('%s: Not a directory: symbolic links are not allowed.', substr($path, \strlen($root) + 1))];
+            }
         }
 
         $problems = [];
-        $bytes = 0;
-        $entries = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS));
+        $entries = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::SELF_FIRST);
         foreach ($entries as $entry) {
-            if (!$entry instanceof \SplFileInfo) {
-                continue;
-            }
-            if ($entry->isLink()) {
+            if ($entry instanceof \SplFileInfo && $entry->isLink()) {
                 $problems[] = \sprintf('%s/%s: Symbolic links are not allowed.', $directory, substr($entry->getPathname(), \strlen($path) + 1));
-                continue;
             }
-            $bytes += $entry->getSize();
-        }
-        if ($bytes > self::MAX_VERSION_BYTES) {
-            $problems[] = \sprintf('%s: %.1f MB: a version may weigh %d MB at most, files included.', $directory, $bytes / 1_000_000, self::MAX_VERSION_BYTES / 1_000_000);
         }
 
         return $problems;
+    }
+
+    /**
+     * The size of a version: the sum of every file, with no link left to follow.
+     *
+     * @return list<string>
+     */
+    private static function checkSize(string $path, string $directory): array
+    {
+        $bytes = 0;
+        $entries = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS));
+        foreach ($entries as $entry) {
+            if ($entry instanceof \SplFileInfo) {
+                $bytes += $entry->getSize();
+            }
+        }
+        if ($bytes > self::MAX_VERSION_BYTES) {
+            return [\sprintf('%s: %.1f MB: a version may weigh %d MB at most, files included.', $directory, $bytes / 1_000_000, self::MAX_VERSION_BYTES / 1_000_000)];
+        }
+
+        return [];
     }
 
     /**

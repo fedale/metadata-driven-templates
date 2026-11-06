@@ -153,20 +153,40 @@ final class PullRequestCheckTest extends TestCase
         );
     }
 
-    public function testRefusesSymbolicLinksAndHeavyVersions(): void
+    public function testReadsNothingThroughASymbolicLink(): void
     {
         $added = $this->addVersion('1.0.0');
-        symlink('/etc/passwd', $this->root.'/'.$added.'/files/passwd');
+        // A manifest pointing at a file of the runner: read, it would show up in a problem.
+        rename($this->root.'/'.$added.'/template.yaml', $this->root.'/manifest.yaml');
+        symlink($this->root.'/manifest.yaml', $this->root.'/'.$added.'/template.yaml');
+        file_put_contents($this->root.'/manifest.yaml', 'runner secret: [');
+
+        $problems = $this->check($this->added($added));
+
+        self::assertSame(['templates/acme/shop/1.0.0/template.yaml: Symbolic links are not allowed.'], $problems);
+    }
+
+    public function testRefusesALinkedDirectoryAboveTheVersion(): void
+    {
+        $this->addVersion('1.0.0', 'globex/shop');
+        symlink($this->root.'/templates/globex', $this->root.'/templates/acme');
+
+        self::assertSame(
+            ['templates/acme: Not a directory: symbolic links are not allowed.'],
+            $this->check([new ChangedFile('A', 'templates/acme/shop/1.0.0/template.yaml')]),
+        );
+    }
+
+    public function testRefusesAHeavyVersion(): void
+    {
+        $added = $this->addVersion('1.0.0');
         // A sparse file: 21 MB as far as its size goes, nothing on the disk.
         $heavy = fopen($this->root.'/'.$added.'/files/catalogue.pdf', 'w');
         self::assertIsResource($heavy);
         ftruncate($heavy, 21_000_000);
         fclose($heavy);
 
-        $problems = $this->check($this->added($added));
-
-        self::assertContains('templates/acme/shop/1.0.0/files/passwd: Symbolic links are not allowed.', $problems);
-        self::assertContains('templates/acme/shop/1.0.0: 21.0 MB: a version may weigh 20 MB at most, files included.', $problems);
+        self::assertContains('templates/acme/shop/1.0.0: 21.0 MB: a version may weigh 20 MB at most, files included.', $this->check($this->added($added)));
     }
 
     /**
