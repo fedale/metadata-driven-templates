@@ -6,3 +6,5 @@
 #
 # acme:
 #   owners: [mario-rossi, giulia-bianchi]
+fedale:
+  owners: [fedale]
