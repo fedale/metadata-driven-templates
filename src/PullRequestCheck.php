@@ -1,0 +1,174 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Fedale\TemplateCatalog;
+
+use Fedale\TemplateFormat\Format;
+use Fedale\TemplateFormat\InvalidPackage;
+use Fedale\TemplateFormat\PackageChecker;
+use Fedale\TemplateFormat\PackageDirectory;
+use Fedale\TemplateFormat\Problem;
+
+/**
+ * What a pull request must satisfy before a maintainer reviews it.
+ *
+ * Under templates/, a pull request may only add version directories,
+ * templates/<vendor>/<name>/<version>/: a published version never changes, since installations
+ * compare against it when they upgrade. Each added version must be a valid package (the format
+ * library's checks), match its path, be higher than the versions already listed, stay under the
+ * size limit, and belong to a vendor the author owns.
+ *
+ * Anything else (vendors.yaml, yanked.yaml, the tools) is left to the maintainers' review.
+ */
+final readonly class PullRequestCheck
+{
+    public const string TEMPLATES = 'templates';
+
+    /**
+     * 20 MB per version, files of the seeds included: well below GitHub's 50 MB warning per file
+     * and metadata-driven's default 50 MB download limit.
+     */
+    public const int MAX_VERSION_BYTES = 20_000_000;
+
+    public function __construct(
+        private PackageDirectory $reader,
+        private PackageChecker $checker,
+    ) {
+    }
+
+    /**
+     * @param list<ChangedFile> $changes   what the pull request changes
+     * @param Vendors           $vendors   the vendors as the base branch lists them: a pull request
+     *                                     cannot register a vendor and publish under it at once
+     * @param string|null       $author    the GitHub login of the pull request's author; null skips
+     *                                     the ownership check (a maintainer running it locally)
+     * @param list<string>      $published the version directories on the base branch
+     *                                     ("templates/acme/shop/1.0.0"): read from git, not from
+     *                                     the checkout, where a published directory and a new one
+     *                                     look alike
+     *
+     * @return list<string> every problem found, empty when the pull request may be reviewed
+     */
+    public function check(string $root, array $changes, Vendors $vendors, ?string $author, array $published): array
+    {
+        $problems = [];
+        $versions = [];
+        foreach ($changes as $change) {
+            $parts = explode('/', $change->path);
+            if (self::TEMPLATES !== $parts[0]) {
+                continue;
+            }
+            if (\count($parts) < 5) {
+                $problems[] = \sprintf('%s: A template\'s files go in templates/<vendor>/<name>/<version>/.', $change->path);
+                continue;
+            }
+            if (!$change->isAdded() || \in_array(implode('/', \array_slice($parts, 0, 4)), $published, true)) {
+                $problems[] = \sprintf('%s: A published version never changes: publish a new version instead.', $change->path);
+                continue;
+            }
+            $versions[implode('/', \array_slice($parts, 0, 4))] = [$parts[1], $parts[2], $parts[3]];
+        }
+
+        ksort($versions);
+        foreach ($versions as $directory => [$vendor, $name, $version]) {
+            $listed = [];
+            foreach ($published as $publishedDirectory) {
+                [, $publishedVendor, $publishedName, $publishedVersion] = explode('/', $publishedDirectory) + ['', '', '', ''];
+                if ($publishedVendor === $vendor && $publishedName === $name) {
+                    $listed[] = $publishedVersion;
+                }
+            }
+            $problems = [...$problems, ...$this->checkVersion($root, $directory, $vendor, $name, $version, $listed, $vendors, $author)];
+        }
+
+        return $problems;
+    }
+
+    /**
+     * @param list<string> $listed the versions of this template already published
+     *
+     * @return list<string>
+     */
+    private function checkVersion(string $root, string $directory, string $vendor, string $name, string $version, array $listed, Vendors $vendors, ?string $author): array
+    {
+        $template = $vendor.'/'.$name;
+        if (1 !== preg_match(Format::NAME_PATTERN, $template)) {
+            return [\sprintf('%s: "%s" is not a template name (vendor/name, lowercase letters, digits and hyphens).', $directory, $template)];
+        }
+        if (1 !== preg_match(Format::VERSION_PATTERN, $version)) {
+            return [\sprintf('%s: "%s" is not a version (major.minor.patch, e.g. 1.0.0).', $directory, $version)];
+        }
+
+        $problems = [];
+        if (!$vendors->has($vendor)) {
+            $problems[] = \sprintf('%s: The vendor "%s" is not registered: add it to vendors.yaml in a pull request of its own first.', $directory, $vendor);
+        } elseif (null !== $author && !$vendors->isOwner($vendor, $author)) {
+            $problems[] = \sprintf('%s: %s is not an owner of the vendor "%s" (vendors.yaml).', $directory, $author, $vendor);
+        }
+
+        $problems = [...$problems, ...$this->checkFiles($root.'/'.$directory, $directory)];
+
+        $newer = array_filter(
+            $listed,
+            static fn (string $listed): bool => version_compare($listed, $version, '>='),
+        );
+        if ([] !== $newer) {
+            usort($newer, static fn (string $a, string $b): int => version_compare($a, $b));
+            $problems[] = \sprintf('%s: %s %s is already listed: the new version must be higher.', $directory, $template, end($newer));
+        }
+
+        try {
+            $package = $this->reader->read($root.'/'.$directory);
+        } catch (InvalidPackage $e) {
+            return [...$problems, ...self::located($directory, $e->problems)];
+        }
+        if ($package->name() !== $template || $package->version() !== $version) {
+            $problems[] = \sprintf('%s: The manifest says %s %s: the directory must be templates/%s/%s/.', $directory, $package->name(), $package->version(), $package->name(), $package->version());
+        }
+
+        return [...$problems, ...self::located($directory, $this->checker->check($package))];
+    }
+
+    /**
+     * Symbolic links are refused (git stores them, and they could point outside the package);
+     * the size is the sum of every file.
+     *
+     * @return list<string>
+     */
+    private function checkFiles(string $path, string $directory): array
+    {
+        if (!is_dir($path) || is_link($path)) {
+            return [\sprintf('%s: Not a directory.', $directory)];
+        }
+
+        $problems = [];
+        $bytes = 0;
+        $entries = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS));
+        foreach ($entries as $entry) {
+            if (!$entry instanceof \SplFileInfo) {
+                continue;
+            }
+            if ($entry->isLink()) {
+                $problems[] = \sprintf('%s/%s: Symbolic links are not allowed.', $directory, substr($entry->getPathname(), \strlen($path) + 1));
+                continue;
+            }
+            $bytes += $entry->getSize();
+        }
+        if ($bytes > self::MAX_VERSION_BYTES) {
+            $problems[] = \sprintf('%s: %.1f MB: a version may weigh %d MB at most, files included.', $directory, $bytes / 1_000_000, self::MAX_VERSION_BYTES / 1_000_000);
+        }
+
+        return $problems;
+    }
+
+    /**
+     * @param list<Problem> $problems located in the package
+     *
+     * @return list<string> located in the repository
+     */
+    private static function located(string $directory, array $problems): array
+    {
+        return array_map(static fn (Problem $problem): string => $directory.('' === $problem->path ? ': ' : '/').$problem, $problems);
+    }
+}

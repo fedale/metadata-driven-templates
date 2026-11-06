@@ -1,0 +1,25 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Fedale\TemplateCatalog\Command\CheckCommand;
+use Fedale\TemplateCatalog\PullRequestCheck;
+use Fedale\TemplateFormat\DocumentCodec;
+use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
+use Fedale\TemplateFormat\PackageChecker;
+use Fedale\TemplateFormat\PackageDirectory;
+use Fedale\TemplateFormat\SchemaValidator;
+use Fedale\TemplateFormat\SeedRecords;
+use Symfony\Component\Console\Application;
+
+require dirname(__DIR__).'/vendor/autoload.php';
+
+$check = new PullRequestCheck(
+    new PackageDirectory(new DocumentCodec()),
+    new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
+);
+
+$application = new Application('metadata-driven template catalog');
+$application->addCommand(new CheckCommand($check));
+$application->run();

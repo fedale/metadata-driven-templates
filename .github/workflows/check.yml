@@ -1,0 +1,84 @@
+# Checks a pull request before a maintainer reviews it.
+#
+# The tools come from the base branch, the templates from the pull request: a pull request that
+# changes bin/ or src/ is still checked by the tools it wants to replace. `pull_request` (not
+# `pull_request_target`) runs with a read-only token and no secrets, forks included.
+name: Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tools, from the base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: catalog
+
+      - name: The pull request
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pull-request
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: The template format, beside the tools (composer.json's path repository)
+        uses: actions/checkout@v4
+        with:
+          repository: fedale/metadata-driven-template-format
+          path: template-format
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sodium, zlib
+          tools: composer:v2
+          coverage: none
+
+      - name: Install the tools
+        working-directory: catalog
+        run: composer install --no-interaction --no-progress --no-dev
+
+      - name: Check
+        working-directory: catalog
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: bin/catalog check --repository=../pull-request --base="$BASE" --author="$AUTHOR"
+
+  # The tools' own tests, when a pull request changes them.
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: catalog
+          persist-credentials: false
+
+      - uses: actions/checkout@v4
+        with:
+          repository: fedale/metadata-driven-template-format
+          path: template-format
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sodium, zlib
+          tools: composer:v2
+          coverage: none
+
+      - name: composer qa
+        working-directory: catalog
+        run: |
+          composer install --no-interaction --no-progress
+          composer qa

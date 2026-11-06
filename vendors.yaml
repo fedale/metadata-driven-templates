@@ -1,0 +1,8 @@
+# The vendor namespaces of the catalog: only the owners of "acme" publish templates named
+# "acme/...". Owners are GitHub user logins.
+#
+# A new vendor is a pull request of its own to this file, reviewed by the maintainers; its
+# templates come in later pull requests.
+#
+# acme:
+#   owners: [mario-rossi, giulia-bianchi]
