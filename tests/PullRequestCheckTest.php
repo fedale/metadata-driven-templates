@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Fedale\TemplateCatalog\Tests;
 
+use Fedale\TemplateCatalog\BaseBranch;
 use Fedale\TemplateCatalog\ChangedFile;
 use Fedale\TemplateCatalog\PullRequestCheck;
 use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
 use Fedale\TemplateCatalog\Vendors;
+use Fedale\TemplateCatalog\Yanked;
 use Fedale\TemplateFormat\DocumentCodec;
 use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
 use Fedale\TemplateFormat\PackageChecker;
@@ -22,6 +24,9 @@ final class PullRequestCheckTest extends TestCase
 
     /** @var list<string> the version directories the base branch has */
     private array $published = [];
+
+    /** yanked.yaml on the base branch */
+    private string $yanked = '';
 
     protected function setUp(): void
     {
@@ -189,6 +194,45 @@ final class PullRequestCheckTest extends TestCase
         self::assertContains('templates/acme/shop/1.0.0: 21.0 MB: a version may weigh 20 MB at most, files included.', $this->check($this->added($added)));
     }
 
+    public function testAnOwnerYanksAPublishedVersion(): void
+    {
+        $this->published[] = $this->addVersion('1.0.0');
+        file_put_contents($this->root.'/yanked.yaml', "acme/shop: [1.0.0]\n");
+
+        self::assertSame([], $this->check([new ChangedFile('M', 'yanked.yaml')]));
+        self::assertSame(
+            ['yanked.yaml: anna is not an owner of the vendor "acme": only its owners yank its versions.'],
+            $this->check([new ChangedFile('M', 'yanked.yaml')], author: 'anna'),
+        );
+    }
+
+    public function testListingAVersionAgainIsAnOwnersCallToo(): void
+    {
+        $this->published[] = $this->addVersion('1.0.0');
+        $this->yanked = "acme/shop: [1.0.0]\n";
+        file_put_contents($this->root.'/yanked.yaml', "# nothing yanked\n");
+
+        self::assertSame([], $this->check([new ChangedFile('M', 'yanked.yaml')]));
+        self::assertSame(
+            ['yanked.yaml: anna is not an owner of the vendor "acme": only its owners yank its versions.'],
+            $this->check([new ChangedFile('M', 'yanked.yaml')], author: 'anna'),
+        );
+    }
+
+    public function testYanksPublishedVersionsOnly(): void
+    {
+        $this->published[] = $this->addVersion('1.0.0');
+        file_put_contents($this->root.'/yanked.yaml', "acme/shop: [1.0.0, 1.1.0]\n");
+
+        self::assertSame(['yanked.yaml: acme/shop 1.1.0 is not published.'], $this->check([new ChangedFile('M', 'yanked.yaml')]));
+
+        file_put_contents($this->root.'/yanked.yaml', "acme/shop: 1.0.0\n");
+        self::assertSame(
+            ['yanked.yaml: "acme/shop" is not a template name followed by a list of versions.'],
+            $this->check([new ChangedFile('M', 'yanked.yaml')]),
+        );
+    }
+
     /**
      * @param list<ChangedFile> $changes
      *
@@ -201,7 +245,7 @@ final class PullRequestCheckTest extends TestCase
             new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
         );
 
-        return $check->check($this->root, $changes, Vendors::fromYaml("acme:\n  owners: [mario-rossi]\n"), $author, $this->published);
+        return $check->check($this->root, $changes, new BaseBranch(Vendors::fromYaml("acme:\n  owners: [mario-rossi]\n"), $this->published, Yanked::fromYaml($this->yanked)), $author);
     }
 
     /**

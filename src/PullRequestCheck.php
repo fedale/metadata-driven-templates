@@ -19,11 +19,14 @@ use Fedale\TemplateFormat\Problem;
  * library's checks), match its path, be higher than the versions already listed, stay under the
  * size limit, and belong to a vendor the author owns.
  *
- * Anything else (vendors.yaml, yanked.yaml, the tools) is left to the maintainers' review.
+ * yanked.yaml may yank a version, or list it again, of a vendor the author owns.
+ *
+ * Anything else (vendors.yaml, catalog.pub, the tools) is left to the maintainers' review.
  */
 final readonly class PullRequestCheck
 {
     public const string TEMPLATES = 'templates';
+    public const string YANKED = 'yanked.yaml';
 
     /**
      * 20 MB per version, files of the seeds included: well below GitHub's 50 MB warning per file
@@ -38,24 +41,25 @@ final readonly class PullRequestCheck
     }
 
     /**
-     * @param list<ChangedFile> $changes   what the pull request changes
-     * @param Vendors           $vendors   the vendors as the base branch lists them: a pull request
-     *                                     cannot register a vendor and publish under it at once
-     * @param string|null       $author    the GitHub login of the pull request's author; null skips
-     *                                     the ownership check (a maintainer running it locally)
-     * @param list<string>      $published the version directories on the base branch
-     *                                     ("templates/acme/shop/1.0.0"): read from git, not from
-     *                                     the checkout, where a published directory and a new one
-     *                                     look alike
+     * @param list<ChangedFile> $changes what the pull request changes
+     * @param BaseBranch        $base    the vendors, published and yanked versions of the base: a
+     *                                   pull request cannot register a vendor and publish under it
+     *                                   at once
+     * @param string|null       $author  the GitHub login of the pull request's author; null skips
+     *                                   the ownership checks (a maintainer running it locally)
      *
      * @return list<string> every problem found, empty when the pull request may be reviewed
      */
-    public function check(string $root, array $changes, Vendors $vendors, ?string $author, array $published): array
+    public function check(string $root, array $changes, BaseBranch $base, ?string $author): array
     {
         $problems = [];
         $versions = [];
         foreach ($changes as $change) {
             $parts = explode('/', $change->path);
+            if (self::YANKED === $change->path) {
+                $problems = [...$problems, ...$this->checkYanked($root, $base, $author)];
+                continue;
+            }
             if (self::TEMPLATES !== $parts[0]) {
                 continue;
             }
@@ -63,7 +67,7 @@ final readonly class PullRequestCheck
                 $problems[] = \sprintf('%s: A template\'s files go in templates/<vendor>/<name>/<version>/.', $change->path);
                 continue;
             }
-            if (!$change->isAdded() || \in_array(implode('/', \array_slice($parts, 0, 4)), $published, true)) {
+            if (!$change->isAdded() || \in_array(implode('/', \array_slice($parts, 0, 4)), $base->published, true)) {
                 $problems[] = \sprintf('%s: A published version never changes: publish a new version instead.', $change->path);
                 continue;
             }
@@ -73,13 +77,13 @@ final readonly class PullRequestCheck
         ksort($versions);
         foreach ($versions as $directory => [$vendor, $name, $version]) {
             $listed = [];
-            foreach ($published as $publishedDirectory) {
+            foreach ($base->published as $publishedDirectory) {
                 [, $publishedVendor, $publishedName, $publishedVersion] = explode('/', $publishedDirectory) + ['', '', '', ''];
                 if ($publishedVendor === $vendor && $publishedName === $name) {
                     $listed[] = $publishedVersion;
                 }
             }
-            $problems = [...$problems, ...$this->checkVersion($root, $directory, $vendor, $name, $version, $listed, $vendors, $author)];
+            $problems = [...$problems, ...$this->checkVersion($root, $directory, $vendor, $name, $version, $listed, $base->vendors, $author)];
         }
 
         return $problems;
@@ -109,7 +113,7 @@ final readonly class PullRequestCheck
 
         // Nothing is read through a link: the reader would follow it out of the checkout, and a
         // problem quoting what it read would publish a file of the runner in the check's log.
-        $links = self::links($root, $directory);
+        $links = Links::in($root, $directory);
         if ([] !== $links) {
             return [...$problems, ...$links];
         }
@@ -137,26 +141,28 @@ final readonly class PullRequestCheck
     }
 
     /**
-     * Symbolic links are refused (git stores them, and they could point outside the checkout):
-     * the version directory and each directory above it up to the root, and everything inside.
+     * A change of yanked.yaml: valid, naming published versions, each yanked or listed again by
+     * an owner of its vendor.
      *
      * @return list<string>
      */
-    private static function links(string $root, string $directory): array
+    private function checkYanked(string $root, BaseBranch $base, ?string $author): array
     {
-        $path = $root;
-        foreach (explode('/', $directory) as $segment) {
-            $path .= '/'.$segment;
-            if (is_link($path) || !is_dir($path)) {
-                return [\sprintf('%s: Not a directory: symbolic links are not allowed.', substr($path, \strlen($root) + 1))];
-            }
+        $file = $root.'/'.self::YANKED;
+        $content = is_file($file) && !is_link($file) ? file_get_contents($file) : '';
+        try {
+            $yanked = Yanked::fromYaml(false === $content ? '' : $content);
+        } catch (\InvalidArgumentException $e) {
+            return [$e->getMessage()];
         }
 
         $problems = [];
-        $entries = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($path, \FilesystemIterator::SKIP_DOTS), \RecursiveIteratorIterator::SELF_FIRST);
-        foreach ($entries as $entry) {
-            if ($entry instanceof \SplFileInfo && $entry->isLink()) {
-                $problems[] = \sprintf('%s/%s: Symbolic links are not allowed.', $directory, substr($entry->getPathname(), \strlen($path) + 1));
+        foreach ($yanked->differences($base->yanked) as [$name, $version]) {
+            $vendor = explode('/', $name)[0];
+            if (!\in_array(self::TEMPLATES.'/'.$name.'/'.$version, $base->published, true)) {
+                $problems[] = \sprintf('%s: %s %s is not published.', self::YANKED, $name, $version);
+            } elseif (null !== $author && !$base->vendors->isOwner($vendor, $author)) {
+                $problems[] = \sprintf('%s: %s is not an owner of the vendor "%s": only its owners yank its versions.', self::YANKED, $author, $vendor);
             }
         }
 
@@ -189,7 +195,7 @@ final readonly class PullRequestCheck
      *
      * @return list<string> located in the repository
      */
-    private static function located(string $directory, array $problems): array
+    public static function located(string $directory, array $problems): array
     {
         return array_map(static fn (Problem $problem): string => $directory.('' === $problem->path ? ': ' : '/').$problem, $problems);
     }

@@ -56,6 +56,39 @@ The pull request must come from an owner of the vendor, and may only add version
 The **Check** action runs on every pull request and lists each problem with the file it is in.
 When it passes, a maintainer reviews the template and merges it.
 
+### 4. Publication
+
+Once merged, the **Publish** action packs every version, lists it in the signed index and
+deploys both on GitHub Pages, within a few minutes. Your version is then installable:
+
+```bash
+bin/console metadata:template:install acme/shop@1.1.0
+```
+
+### Yanking a version
+
+A broken version isn't deleted: installations rely on it to upgrade. Yank it instead, with a
+pull request to [`yanked.yaml`](yanked.yaml):
+
+```yaml
+acme/shop: [1.1.0]
+```
+
+A yanked version is hidden from new installs and upgrades, and stays installable by its exact
+version. Only an owner of the vendor can yank its versions, or list them again.
+
+## Using the catalog in metadata-driven
+
+Set these two variables in metadata-driven's environment:
+
+```bash
+TEMPLATE_CATALOG_URL=https://fedale.github.io/metadata-driven-templates/index.json
+TEMPLATE_CATALOG_KEY=<the content of catalog.pub>
+```
+
+The catalog is always signed: metadata-driven refuses an entry whose signature doesn't match
+the key.
+
 ## Checking locally
 
 You need PHP 8.4 and Composer, with
@@ -65,12 +98,24 @@ cloned next to this repository as `template-format`:
 ```bash
 composer install
 bin/catalog check --base=origin/main
+bin/catalog build --unsigned --output=/tmp/catalog-site   # the site, unsigned: to look at only
 ```
 
 ## For maintainers
 
 - Merge only what you reviewed: the check is structural, it cannot tell whether a template
   makes sense.
+- **The catalog's key.** Generate it once, outside any repository, with metadata-driven:
+  `bin/console metadata:template:keygen ~/catalog.key`. The public key it prints goes into
+  [`catalog.pub`](catalog.pub), by pull request. The content of `~/catalog.key` goes into the
+  `CATALOG_SECRET_KEY` secret of the `github-pages` environment (**Settings → Environments →
+  github-pages**, deployments limited to `main`); keep a copy in a password manager, then delete
+  the file. A lost or leaked key means a new one, and every installation updating
+  `TEMPLATE_CATALOG_KEY`.
+- **GitHub Pages**: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+- The publication rebuilds everything at every merge: archives are reproducible and signatures
+  deterministic, so unchanged versions keep their checksum and signature. It publishes nothing
+  if a version on `main` is invalid. Rerun it from **Actions → Publish → Run workflow**.
 - Branch protection on `main`: pull requests only, the **Check** status required, a review from a
   code owner ([`.github/CODEOWNERS`](.github/CODEOWNERS)) required.
 - The tools (`bin/`, `src/`, `tests/`) have their own tests: `composer qa`.
