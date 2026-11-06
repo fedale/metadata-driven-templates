@@ -3,7 +3,8 @@
 The brief is in metadata-driven's `docs/internal/template-plan.md`, section "The catalog". This
 file is the catalog's own plan: its phases and what was built.
 
-Status: **C1 done**, awaiting review before C2 (publication on merge).
+Status: **C1 and C2 done** (C2 on `feature/publish`), awaiting review before C3 (the static
+site).
 
 ## Decisions
 
@@ -14,6 +15,10 @@ Status: **C1 done**, awaiting review before C2 (publication on merge).
   catalog packs it: archives are reproducible and Ed25519 signatures deterministic, so the whole
   index can be rebuilt from the sources at every publication, with no state.
 - **20 MB per version** (decimal MB, files included).
+- **Archives on GitHub Pages, next to the index** (2026-11-06, C2), not in Releases: the whole
+  site is rebuilt at every merge and deployed at once, so the index and the archives never
+  disagree, and there are no releases to keep in step. Pages serves 1 GB at most: the build
+  stops at 900 MB, and archives move to Releases then.
 - **Owners are GitHub user logins** (`vendors.yaml`): the check compares them with the pull
   request's author. Organizations and teams would need the GitHub API (membership); later.
 - Repository: `fedale/metadata-driven-templates`; tools in PHP 8.4 (`Fedale\TemplateCatalog`,
@@ -38,11 +43,24 @@ Status: **C1 done**, awaiting review before C2 (publication on merge).
      from `fedale/metadata-driven-template-format`, checked out beside the tools for the path
      repository.
    - Not checked yet: the semver bump against the changes (C4).
-2. **C2 — publication on merge**: an Action on `push` to `main` packs each new version
-   (`Archive::pack`), uploads it as a Release asset (tag `<vendor>-<name>-<version>`), rebuilds
-   `index.json` from every version and `yanked.yaml`, signs each entry with the catalog key (a
-   repository secret), and deploys `index.json` to GitHub Pages. metadata-driven's
-   `TEMPLATE_CATALOG_URL` and `TEMPLATE_CATALOG_KEY` then point at it.
+2. **C2 — publication on merge** — done. As built:
+   - `bin/catalog build --output= [--repository=] [--unsigned]` (`BuildCommand`,
+     `CatalogBuilder`): every version directory read, checked and matched against its path (a
+     link anywhere refused, `Links`), `yanked.yaml` (`Yanked`) naming published versions only;
+     then `archives/<vendor>/<name>-<version>.tar.gz`, `index.json` (relative urls, requires
+     from the manifest, yanked flags) and `catalog.pub`. Nothing is written unless everything is
+     valid. Each entry signed with `CATALOG_SECRET_KEY` (environment, never an argument) and
+     verified against `catalog.pub`, so a wrong key fails the build rather than publishing an
+     index every installation refuses. `--unsigned` to look at it locally only.
+   - `.github/workflows/publish.yml`: on push to `main` and by hand; one job in the
+     `github-pages` environment (its secret, deployments limited to `main`), `pages: write`,
+     `id-token: write`; build, `upload-pages-artifact`, `deploy-pages`; one publication at a
+     time, never cancelled.
+   - The check now reads `yanked.yaml` too: valid, naming published versions, each yanked or
+     listed again by an owner of its vendor (`BaseBranch` gathers what the check reads from the
+     base: vendors, published versions, yanked versions).
+   - Index address: `https://fedale.github.io/metadata-driven-templates/index.json`.
+   - The format library is checked out at its `main`: pin it to a tag once it has one.
 3. **C3 — the static site**: a page per template (README, objects and fields read from the
    documents, versions, requires, license), a search page, and a JSON search file; built by the
    same Action.

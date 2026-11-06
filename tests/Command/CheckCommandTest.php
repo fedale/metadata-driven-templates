@@ -85,7 +85,7 @@ final class CheckCommandTest extends TestCase
         $tester = $this->runCheck(['--base' => 'origin/main']);
 
         self::assertSame(Command::FAILURE, $tester->getStatusCode());
-        self::assertStringContainsString('git ls-tree failed', $tester->getDisplay());
+        self::assertMatchesRegularExpression('~git [a-z-]+ failed~', $tester->getDisplay());
     }
 
     /**

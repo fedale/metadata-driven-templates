@@ -3,8 +3,11 @@
 
 declare(strict_types=1);
 
+use Fedale\TemplateCatalog\CatalogBuilder;
+use Fedale\TemplateCatalog\Command\BuildCommand;
 use Fedale\TemplateCatalog\Command\CheckCommand;
 use Fedale\TemplateCatalog\PullRequestCheck;
+use Fedale\TemplateFormat\Archive;
 use Fedale\TemplateFormat\DocumentCodec;
 use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
 use Fedale\TemplateFormat\PackageChecker;
@@ -15,11 +18,10 @@ use Symfony\Component\Console\Application;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
-$check = new PullRequestCheck(
-    new PackageDirectory(new DocumentCodec()),
-    new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
-);
+$reader = new PackageDirectory(new DocumentCodec());
+$checker = new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords());
 
 $application = new Application('metadata-driven template catalog');
-$application->addCommand(new CheckCommand($check));
+$application->addCommand(new CheckCommand(new PullRequestCheck($reader, $checker)));
+$application->addCommand(new BuildCommand(new CatalogBuilder($reader, $checker, new Archive())));
 $application->run();

@@ -1,0 +1,68 @@
+# Publishes the catalog on GitHub Pages after every merge into main: index.json, signed, and an
+# archive per version, all rebuilt from the sources (bin/catalog build).
+#
+# Only merged code runs here, with the catalog's secret key: keep CATALOG_SECRET_KEY an
+# environment secret of "github-pages", whose deployments are limited to main.
+name: Publish
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One publication at a time, the latest last; never cancel one half-deployed.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: catalog
+          persist-credentials: false
+
+      - name: The template format, beside the tools (composer.json's path repository)
+        uses: actions/checkout@v4
+        with:
+          repository: fedale/metadata-driven-template-format
+          path: template-format
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: sodium, zlib
+          tools: composer:v2
+          coverage: none
+
+      - name: Install the tools
+        working-directory: catalog
+        run: composer install --no-interaction --no-progress --no-dev
+
+      - name: Build
+        working-directory: catalog
+        env:
+          CATALOG_SECRET_KEY: ${{ secrets.CATALOG_SECRET_KEY }}
+        run: bin/catalog build --output=../site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

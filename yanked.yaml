@@ -1,0 +1,4 @@
+# Yanked versions: hidden from new installs and upgrades, still installable by their exact
+# version. A version is yanked by a pull request from an owner of its vendor.
+#
+# acme/shop: ["1.0.1"]

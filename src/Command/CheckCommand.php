@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Fedale\TemplateCatalog\Command;
 
+use Fedale\TemplateCatalog\BaseBranch;
 use Fedale\TemplateCatalog\Git;
 use Fedale\TemplateCatalog\PullRequestCheck;
-use Fedale\TemplateCatalog\Vendors;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,7 +31,8 @@ final class CheckCommand extends Command
                 Checks every version directory the pull request adds under templates/: a valid
                 package, matching its path, higher than the listed versions, at most 20 MB, under
                 a vendor of vendors.yaml (as the base branch lists it) that the author owns.
-                Published versions may not change.
+                Published versions may not change. A change of yanked.yaml names published
+                versions, of vendors the author owns.
 
                 The GitHub Action runs it from the base branch, so that a pull request cannot
                 change the checks it is checked by.
@@ -51,8 +52,7 @@ final class CheckCommand extends Command
 
         try {
             $git = new Git($repository);
-            $vendors = Vendors::fromYaml($git->show($base, 'vendors.yaml') ?? '');
-            $problems = $this->check->check($repository, $git->changesSince($base), $vendors, \is_string($author) && '' !== $author ? $author : null, $git->versionDirectories($base));
+            $problems = $this->check->check($repository, $git->changesSince($base), BaseBranch::read($git, $base), \is_string($author) && '' !== $author ? $author : null);
         } catch (\RuntimeException $e) {
             $output->writeln(\sprintf('<error>%s</error>', $e->getMessage()));
 
