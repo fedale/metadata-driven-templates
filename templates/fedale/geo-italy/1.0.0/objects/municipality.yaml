@@ -1,0 +1,50 @@
+format: metadata-driven/v1
+kind: Object
+id: fedale.municipality
+spec:
+  name: municipality
+  label: Municipality
+  plural: Municipalities
+  label_field: fedale.municipality.name
+  fields:
+    - id: fedale.municipality.code
+      name: code
+      type: text
+      label: ISTAT code
+      required: true
+      unique: true
+      settings:
+        maxLength: 6
+        pattern: '^[0-9]{6}$'
+        patternMessage: Six digits, as ISTAT writes them (e.g. 001001).
+    - id: fedale.municipality.name
+      name: name
+      type: text
+      label: Name
+      required: true
+      settings:
+        maxLength: 100
+    - id: fedale.municipality.cadastral_code
+      name: cadastral_code
+      type: text
+      label: Cadastral code
+      required: true
+      unique: true
+      settings:
+        maxLength: 4
+        pattern: '^[A-Z][0-9]{3}$'
+        patternMessage: A capital letter and three digits (e.g. A074).
+    - id: fedale.municipality.capital
+      name: capital
+      type: boolean
+      label: Provincial capital
+    - id: fedale.municipality.province
+      name: province
+      type: relation
+      label: Province
+      required: true
+      settings:
+        target: fedale.province
+        onDelete: restrict
+        inverseName: municipalities
+        inverseLabel: Municipalities

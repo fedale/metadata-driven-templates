@@ -1,0 +1,59 @@
+format: metadata-driven/v1
+kind: Object
+id: fedale.province
+spec:
+  name: province
+  label: Province
+  plural: Provinces
+  label_field: fedale.province.name
+  fields:
+    - id: fedale.province.code
+      name: code
+      type: text
+      label: ISTAT code
+      required: true
+      unique: true
+      settings:
+        maxLength: 3
+        pattern: '^[0-9]{3}$'
+        patternMessage: Three digits, as ISTAT writes them (e.g. 201).
+    - id: fedale.province.name
+      name: name
+      type: text
+      label: Name
+      required: true
+      unique: true
+      settings:
+        maxLength: 100
+    - id: fedale.province.abbreviation
+      name: abbreviation
+      type: text
+      label: Abbreviation
+      required: true
+      unique: true
+      settings:
+        maxLength: 2
+        pattern: '^[A-Z]{2}$'
+        patternMessage: Two capital letters (e.g. TO).
+    - id: fedale.province.kind
+      name: kind
+      type: select
+      label: Kind
+      required: true
+      settings:
+        options:
+          - { value: province, label: Province }
+          - { value: autonomous_province, label: Autonomous province }
+          - { value: metropolitan_city, label: Metropolitan city }
+          - { value: free_consortium, label: Free consortium of municipalities }
+          - { value: non_administrative_unit, label: Non-administrative unit }
+    - id: fedale.province.region
+      name: region
+      type: relation
+      label: Region
+      required: true
+      settings:
+        target: fedale.region
+        onDelete: restrict
+        inverseName: provinces
+        inverseLabel: Provinces

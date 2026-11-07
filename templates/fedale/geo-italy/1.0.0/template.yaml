@@ -1,0 +1,19 @@
+format: metadata-driven/v1
+kind: Template
+id: fedale/geo-italy
+spec:
+  version: 1.0.0
+  label: Italy, regions to municipalities
+  description: >-
+    The 20 regions, 107 provinces (metropolitan cities, free consortia and the other
+    supra-municipal units) and 7,896 municipalities of Italy, with their ISTAT and cadastral
+    codes, from ISTAT's "Elenco dei comuni italiani" as downloaded on 2026-11-07. The records are managed:
+    new versions of the template follow ISTAT's changes. Data: ISTAT, CC BY 4.0
+    (https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/).
+  license: CC-BY-4.0
+  requires:
+    format: metadata-driven/v1
+  resources:
+    - objects/*.yaml
+    - translations/*.yaml
+    - seeds/*.yaml

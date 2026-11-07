@@ -1,0 +1,36 @@
+format: metadata-driven/v1
+kind: Translations
+id: fedale.translations.it
+spec:
+  locale: it
+  entries:
+    object.region.singular: Regione
+    object.region.plural: Regioni
+    field.region.code: Codice ISTAT
+    field.region.name: Nome
+    message.region.code: Due cifre, come le scrive l'ISTAT (es. 01).
+    object.province.singular: Provincia
+    object.province.plural: Province
+    field.province.code: Codice ISTAT
+    field.province.name: Nome
+    field.province.abbreviation: Sigla
+    message.province.code: Tre cifre, come le scrive l'ISTAT (es. 201).
+    message.province.abbreviation: Due lettere maiuscole (es. TO).
+    field.province.kind: Tipologia
+    option.province.kind.province: Provincia
+    option.province.kind.autonomous_province: Provincia autonoma
+    option.province.kind.metropolitan_city: Città metropolitana
+    option.province.kind.free_consortium: Libero consorzio di comuni
+    option.province.kind.non_administrative_unit: Unità non amministrativa
+    field.province.region: Regione
+    inverse.province.region: Province
+    object.municipality.singular: Comune
+    object.municipality.plural: Comuni
+    field.municipality.code: Codice ISTAT
+    field.municipality.name: Nome
+    field.municipality.cadastral_code: Codice catastale
+    field.municipality.capital: Capoluogo di provincia
+    message.municipality.code: Sei cifre, come le scrive l'ISTAT (es. 001001).
+    message.municipality.cadastral_code: Una lettera maiuscola e tre cifre (es. A074).
+    field.municipality.province: Provincia
+    inverse.municipality.province: Comuni
