@@ -1,0 +1,8 @@
+format: metadata-driven/v1
+kind: Seed
+id: fedale.seed.region
+spec:
+  object: fedale.region
+  key: code
+  mode: managed
+  source: seeds/region.csv

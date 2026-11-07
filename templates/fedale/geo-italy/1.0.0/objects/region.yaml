@@ -1,0 +1,27 @@
+format: metadata-driven/v1
+kind: Object
+id: fedale.region
+spec:
+  name: region
+  label: Region
+  plural: Regions
+  label_field: fedale.region.name
+  fields:
+    - id: fedale.region.code
+      name: code
+      type: text
+      label: ISTAT code
+      required: true
+      unique: true
+      settings:
+        maxLength: 2
+        pattern: '^[0-9]{2}$'
+        patternMessage: Two digits, as ISTAT writes them (e.g. 01).
+    - id: fedale.region.name
+      name: name
+      type: text
+      label: Name
+      required: true
+      unique: true
+      settings:
+        maxLength: 100
