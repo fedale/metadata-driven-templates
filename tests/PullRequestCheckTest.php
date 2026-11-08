@@ -16,6 +16,7 @@ use Fedale\TemplateFormat\PackageChecker;
 use Fedale\TemplateFormat\PackageDirectory;
 use Fedale\TemplateFormat\SchemaValidator;
 use Fedale\TemplateFormat\SeedRecords;
+use Fedale\TemplateFormat\Versions\ItemStates;
 use PHPUnit\Framework\TestCase;
 
 final class PullRequestCheckTest extends TestCase
@@ -110,6 +111,49 @@ final class PullRequestCheckTest extends TestCase
             ['templates/acme/shop/1.1.0: acme/shop 1.2.0 is already listed: the new version must be higher.'],
             $this->check($this->added($this->addVersion('1.1.0'))),
         );
+    }
+
+    /**
+     * The number must fit what the version changed against the highest one listed, as
+     * metadata-driven requires when it upgrades.
+     */
+    public function testTheNumberMustFitTheChanges(): void
+    {
+        $this->published[] = $this->addVersion('1.0.0');
+        $colour = "\n    - id: acme.tag.colour\n      name: colour\n      type: text\n      label: Colour\n";
+
+        $patch = $this->addVersion('1.0.1');
+        file_put_contents($this->root.'/'.$patch.'/objects/tag.yaml', $colour, \FILE_APPEND);
+        self::assertSame(
+            ['templates/acme/shop/1.0.1/objects/tag.yaml: field acme.tag.colour: an addition needs a new minor version, 1.0.1 is not one.'],
+            $this->check($this->added($patch)),
+        );
+
+        $minor = $this->addVersion('1.1.0');
+        file_put_contents($this->root.'/'.$minor.'/objects/tag.yaml', $colour, \FILE_APPEND);
+        self::assertSame([], $this->check($this->added($minor)));
+    }
+
+    public function testARenameNeedsAMajorVersion(): void
+    {
+        $this->published[] = $this->addVersion('1.0.0');
+        $this->published[] = $this->addVersion('1.1.0');
+        $rename = static fn (string $directory, string $root): int|false => file_put_contents(
+            $root.'/'.$directory.'/objects/tag.yaml',
+            str_replace("  plural: Tags\n", "  plural: Labels\n", str_replace('  name: tag', '  name: label', (string) file_get_contents($root.'/'.$directory.'/objects/tag.yaml'))),
+        );
+
+        $minor = $this->addVersion('1.2.0');
+        $rename($minor, $this->root);
+        // Compared with 1.1.0, the highest listed.
+        self::assertSame(
+            ['templates/acme/shop/1.2.0/objects/tag.yaml: object acme.tag: a rename needs a new major version, 1.2.0 is not one.'],
+            $this->check($this->added($minor)),
+        );
+
+        $major = $this->addVersion('2.0.0');
+        $rename($major, $this->root);
+        self::assertSame([], $this->check($this->added($major)));
     }
 
     public function testTheManifestMustMatchItsDirectory(): void
@@ -243,6 +287,7 @@ final class PullRequestCheckTest extends TestCase
         $check = new PullRequestCheck(
             new PackageDirectory(new DocumentCodec()),
             new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
+            new ItemStates(new FieldTypeCatalog()),
         );
 
         return $check->check($this->root, $changes, new BaseBranch(Vendors::fromYaml("acme:\n  owners: [mario-rossi]\n"), $this->published, Yanked::fromYaml($this->yanked)), $author);

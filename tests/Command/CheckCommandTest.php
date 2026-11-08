@@ -13,6 +13,7 @@ use Fedale\TemplateFormat\PackageChecker;
 use Fedale\TemplateFormat\PackageDirectory;
 use Fedale\TemplateFormat\SchemaValidator;
 use Fedale\TemplateFormat\SeedRecords;
+use Fedale\TemplateFormat\Versions\ItemStates;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -96,6 +97,7 @@ final class CheckCommandTest extends TestCase
         $tester = new CommandTester(new CheckCommand(new PullRequestCheck(
             new PackageDirectory(new DocumentCodec()),
             new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
+            new ItemStates(new FieldTypeCatalog()),
         )));
         $tester->execute($options + ['--base' => 'main', '--repository' => $this->root]);
 

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "900504a7c60260d1072d288fd3014421",
+    "content-hash": "d68c2f96cd31149c456e61b25782dd21",
     "packages": [
         {
             "name": "dflydev/dot-access-data",
@@ -83,11 +83,17 @@
         },
         {
             "name": "fedale/template-format",
-            "version": "1.0.x-dev",
+            "version": "v1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/fedale/metadata-driven-template-format.git",
+                "reference": "5c3c185822ccb70241fc0c09a6b35d72f6df53b5"
+            },
             "dist": {
-                "type": "path",
-                "url": "../template-format",
-                "reference": "ff678d5e5458a4e1c510c8a26a520bad2c699a27"
+                "type": "zip",
+                "url": "https://api.github.com/repos/fedale/metadata-driven-template-format/zipball/5c3c185822ccb70241fc0c09a6b35d72f6df53b5",
+                "reference": "5c3c185822ccb70241fc0c09a6b35d72f6df53b5",
+                "shasum": ""
             },
             "require": {
                 "ext-sodium": "*",
@@ -104,7 +110,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-main": "1.0.x-dev"
+                    "dev-main": "1.1.x-dev"
                 }
             },
             "autoload": {
@@ -112,44 +118,22 @@
                     "Fedale\\TemplateFormat\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "Fedale\\TemplateFormat\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "cs": [
-                    "php-cs-fixer fix --dry-run --diff"
-                ],
-                "cs-fix": [
-                    "php-cs-fixer fix"
-                ],
-                "phpstan": [
-                    "phpstan analyse --no-progress"
-                ],
-                "test": [
-                    "phpunit"
-                ],
-                "qa": [
-                    "@cs",
-                    "@phpstan",
-                    "@test"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
             "description": "The metadata-driven template format: schemas, package reader, structural checks, archives, signed indexes",
             "keywords": [
-                "ed25519",
+                "Ed25519",
                 "json-schema",
                 "metadata-driven",
                 "templates"
             ],
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/fedale/metadata-driven-template-format/issues",
+                "source": "https://github.com/fedale/metadata-driven-template-format/tree/v1.1.0"
+            },
+            "time": "2026-11-08T18:07:41+00:00"
         },
         {
             "name": "league/commonmark",
@@ -5538,9 +5522,7 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": {
-        "fedale/template-format": 20
-    },
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {

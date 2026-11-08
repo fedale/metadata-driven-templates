@@ -3,7 +3,8 @@
 The brief is in metadata-driven's `docs/internal/template-plan.md`, section "The catalog". This
 file is the catalog's own plan: its phases and what was built.
 
-Status: **C1, C2 and C3 done** (C3 on `feature/site`, awaiting review); next: C4.
+Status: **C1, C2 and C3 done**; C4 in steps (metadata-driven's `template-plan.md`, C4): the
+semver check on `feature/semver-check`, awaiting review.
 
 ## Decisions
 
@@ -41,7 +42,7 @@ Status: **C1, C2 and C3 done** (C3 on `feature/site`, awaiting review); next: C4
      checks it is checked by. A second job runs the tools' own `composer qa`. The format comes
      from `fedale/metadata-driven-template-format`, checked out beside the tools for the path
      repository.
-   - Not checked yet: the semver bump against the changes (C4).
+   - The semver bump against the changes: see C4.
 2. **C2 — publication on merge** — done. As built:
    - `bin/catalog build --output= [--repository=] [--unsigned]` (`BuildCommand`,
      `CatalogBuilder`): every version directory read, checked and matched against its path (a
@@ -59,7 +60,9 @@ Status: **C1, C2 and C3 done** (C3 on `feature/site`, awaiting review); next: C4
      listed again by an owner of its vendor (`BaseBranch` gathers what the check reads from the
      base: vendors, published versions, yanked versions).
    - Index address: `https://fedale.github.io/metadata-driven-templates/index.json`.
-   - The format library is checked out at its `main`: pin it to a tag once it has one.
+   - The format library comes from Packagist (`^1.1`) since 2026-11-08, locked by
+     `composer.lock`; the check job still checks it out beside the tools, for a base older
+     than that (drop it once no open pull request has such a base).
 3. **C3 — the static site** — done (2026-11-08). As built:
    - `SiteBuilder` (`src/Site/`), called by `CatalogBuilder::build()` once the index and the
      archives are written, from the same checked packages: `index.html` (every template, a
@@ -80,10 +83,20 @@ Status: **C1, C2 and C3 done** (C3 on `feature/site`, awaiting review); next: C4
      address appears once, in the instructions, from `--site-url` (default
      `CatalogBuilder::SITE_URL`). No date in the pages: the same sources, the same site.
    - No per-version pages: older versions are listed with their archives only.
-4. **C4 — the rest**: removal of a template (every version yanked), issue templates for
-   reports, verified vendors, organizations as owners, the semver check against the previous
-   version's items (the item comparison is in metadata-driven today: move it into the format
-   library first), metadata-driven's phase 7 (`metadata:template:publish`).
+4. **C4 — the rest**, in steps, each reviewed:
+   - **The semver check** — done (2026-11-08, `feature/semver-check`): `PullRequestCheck`
+     compares each added version with the highest version listed for its template, read from
+     the checkout (a pull request cannot change it, checked first), through the format's
+     `Versions\ItemStates` and `Versions\VersionCheck` (v1.1.0), the rules an upgrade applies;
+     migration steps count when the manifest has some for a version after the listed one. Run
+     only once the version is otherwise valid and higher. Versions added together, with none
+     listed before, are not compared with each other.
+   - Removal of a template: `vendor/name: all` in `yanked.yaml` (every version, future ones
+     too); issue templates for reports.
+   - Verified vendors (`verified: true` in `vendors.yaml`, set by maintainers only, shown on
+     the site) and organizations as owners (the author a public member, through the GitHub
+     API).
+   - metadata-driven's phase 7 (`metadata:template:publish`).
 
 ## Not in scope
 
