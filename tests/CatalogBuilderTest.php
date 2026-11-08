@@ -6,6 +6,7 @@ namespace Fedale\TemplateCatalog\Tests;
 
 use Fedale\TemplateCatalog\BuildFailed;
 use Fedale\TemplateCatalog\CatalogBuilder;
+use Fedale\TemplateCatalog\Site\SiteBuilder;
 use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
 use Fedale\TemplateFormat\Archive;
 use Fedale\TemplateFormat\DocumentCodec;
@@ -139,6 +140,7 @@ final class CatalogBuilderTest extends TestCase
             new PackageDirectory(new DocumentCodec()),
             new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
             new Archive(),
+            new SiteBuilder(new SeedRecords()),
         );
     }
 }

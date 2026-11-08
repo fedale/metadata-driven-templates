@@ -6,6 +6,7 @@ namespace Fedale\TemplateCatalog\Tests\Command;
 
 use Fedale\TemplateCatalog\CatalogBuilder;
 use Fedale\TemplateCatalog\Command\BuildCommand;
+use Fedale\TemplateCatalog\Site\SiteBuilder;
 use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
 use Fedale\TemplateFormat\Archive;
 use Fedale\TemplateFormat\DocumentCodec;
@@ -80,6 +81,7 @@ final class BuildCommandTest extends TestCase
             new PackageDirectory(new DocumentCodec()),
             new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
             new Archive(),
+            new SiteBuilder(new SeedRecords()),
         )));
         $tester->execute($options + ['--repository' => $this->root, '--output' => $this->root.'/site-'.bin2hex(random_bytes(2))]);
 

@@ -29,11 +29,13 @@ final class BuildCommand extends Command
             ->addOption('output', null, InputOption::VALUE_REQUIRED, 'The directory to build the site into: new or empty')
             ->addOption('repository', null, InputOption::VALUE_REQUIRED, 'The checkout of the catalog', '.')
             ->addOption('unsigned', null, InputOption::VALUE_NONE, 'Build without signing, to look at it locally: never publish it')
+            ->addOption('site-url', null, InputOption::VALUE_REQUIRED, 'Where the site is served: the pages tell installations to use its index.json', CatalogBuilder::SITE_URL)
             ->setHelp(<<<'HELP'
                 Packs every version under templates/ into archives/<vendor>/<name>-<version>.tar.gz,
                 and lists them in index.json, yanked versions flagged (yanked.yaml), each entry
                 signed with the catalog's secret key, read from the CATALOG_SECRET_KEY environment
-                variable and checked against catalog.pub.
+                variable and checked against catalog.pub. Then the pages: index.html (every
+                template, searchable), templates/<vendor>/<name>/index.html and search.json.
 
                 Nothing is written unless every version is valid.
                 HELP);
@@ -43,6 +45,12 @@ final class BuildCommand extends Command
     {
         $site = $input->getOption('output');
         $repository = $input->getOption('repository');
+        $siteUrl = $input->getOption('site-url');
+        if (!\is_string($siteUrl) || 1 !== preg_match('~^https://[^\s]+/$~', $siteUrl)) {
+            $output->writeln('<error>--site-url is an https:// address ending with "/".</error>');
+
+            return Command::INVALID;
+        }
         if (!\is_string($site) || '' === $site || !\is_string($repository)) {
             $output->writeln('<error>--output names the directory to build the site into.</error>');
 
@@ -63,7 +71,7 @@ final class BuildCommand extends Command
         }
 
         try {
-            $entries = $this->builder->build($repository, $site, $secretKey);
+            $entries = $this->builder->build($repository, $site, $secretKey, $siteUrl);
         } catch (BuildFailed $e) {
             foreach ($e->problems as $problem) {
                 $output->writeln($problem, OutputInterface::OUTPUT_RAW);

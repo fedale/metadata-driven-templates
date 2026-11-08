@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Fedale\TemplateCatalog;
 
+use Fedale\TemplateCatalog\Site\SiteBuilder;
 use Fedale\TemplateFormat\Archive;
 use Fedale\TemplateFormat\Format;
 use Fedale\TemplateFormat\IndexEntry;
@@ -15,8 +16,8 @@ use Fedale\TemplateFormat\Signature;
 use Fedale\TemplateFormat\TemplateIndex;
 
 /**
- * Builds what GitHub Pages serves: index.json and an archive per version, from the sources of
- * every version.
+ * Builds what GitHub Pages serves: index.json, an archive per version and the pages of the
+ * catalog (SiteBuilder), from the sources of every version.
  *
  * Stateless on purpose: archives are reproducible and Ed25519 signatures deterministic, so the
  * same sources always give the same site, and the whole site is rebuilt at every publication.
@@ -27,6 +28,7 @@ final readonly class CatalogBuilder
 {
     public const string PUBLIC_KEY = 'catalog.pub';
     public const string ARCHIVES = 'archives';
+    public const string SITE_URL = 'https://fedale.github.io/metadata-driven-templates/';
 
     /** GitHub Pages refuses sites above 1 GB: stop well before. */
     public const int MAX_SITE_BYTES = 900_000_000;
@@ -35,18 +37,20 @@ final readonly class CatalogBuilder
         private PackageDirectory $reader,
         private PackageChecker $checker,
         private Archive $archive,
+        private SiteBuilder $site,
     ) {
     }
 
     /**
      * @param string|null $secretKey the catalog's Ed25519 secret key; null builds an unsigned
      *                               index, to look at locally, never to publish
+     * @param string      $siteUrl   where the site is served, ending with "/"
      *
      * @return list<IndexEntry> what the index lists
      *
      * @throws BuildFailed
      */
-    public function build(string $root, string $output, ?string $secretKey): array
+    public function build(string $root, string $output, ?string $secretKey, string $siteUrl = self::SITE_URL): array
     {
         $packages = $this->versions($root);
         $yanked = $this->yanked($root, $packages);
@@ -94,6 +98,7 @@ final readonly class CatalogBuilder
                 throw new BuildFailed([\sprintf('%s/%s: The file cannot be written.', $output, $file)]);
             }
         }
+        $this->site->build($packages, $entries, $output, $siteUrl, $publicKey);
 
         return $entries;
     }

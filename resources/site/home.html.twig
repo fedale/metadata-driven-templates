@@ -1,0 +1,47 @@
+{% extends 'layout.html.twig' %}
+
+{% block body %}
+<h1>Templates</h1>
+<p class="lead">Ready-made models for metadata-driven: objects and fields, forms, views, translations
+    and data, installed in one command and upgraded later, keeping your own changes.</p>
+
+<input type="search" id="search" placeholder="Search {{ pages|length }} template{{ pages|length == 1 ? '' : 's' }}…" aria-label="Search the templates">
+
+<div id="templates">
+{% for page in pages %}
+    <a class="card" href="{{ page.path }}" data-search="{{ [page.name, page.label, page.description, page.objects|map(o => o.name ~ ' ' ~ o.plural)|join(' ')]|join(' ')|lower }}">
+        <strong>{{ page.label }}</strong><span class="name">{{ page.name }} {{ page.version }}</span>
+        {% if page.description %}<p>{{ page.description }}</p>{% endif %}
+    </a>
+{% else %}
+    <p>No template is published yet.</p>
+{% endfor %}
+</div>
+<p id="none" hidden>No template matches.</p>
+
+<h2>Using the catalog</h2>
+<p>metadata-driven looks into this catalog out of the box. To point an instance at it by hand, set:</p>
+<pre><code>TEMPLATE_CATALOG_URL={{ index_url }}
+TEMPLATE_CATALOG_KEY={{ public_key ?? 'the content of catalog.pub' }}</code></pre>
+<p>then install a template by its name: <code>symfony console metadata:template:install vendor/name</code>.</p>
+
+<script>
+    // Filters the list as you type; without JavaScript every template stays listed.
+    (function () {
+        var input = document.getElementById('search');
+        var cards = Array.prototype.slice.call(document.querySelectorAll('#templates .card'));
+        var none = document.getElementById('none');
+        input.addEventListener('input', function () {
+            var words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+            var shown = 0;
+            cards.forEach(function (card) {
+                var text = card.getAttribute('data-search');
+                var match = words.every(function (word) { return text.indexOf(word) !== -1; });
+                card.hidden = !match;
+                shown += match ? 1 : 0;
+            });
+            none.hidden = shown !== 0 || cards.length === 0;
+        });
+    })();
+</script>
+{% endblock %}
