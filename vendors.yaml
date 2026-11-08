@@ -1,10 +1,12 @@
 # The vendor namespaces of the catalog: only the owners of "acme" publish templates named
-# "acme/...". Owners are GitHub user logins.
+# "acme/...". Owners are GitHub logins of users, or of organizations whose public members then
+# own the vendor. "verified: true" is set by the maintainers only (.github/CODEOWNERS).
 #
 # A new vendor is a pull request of its own to this file, reviewed by the maintainers; its
 # templates come in later pull requests.
 #
 # acme:
-#   owners: [mario-rossi, giulia-bianchi]
+#   owners: [mario-rossi, acme-corp]
+#   verified: true
 fedale:
   owners: [fedale]

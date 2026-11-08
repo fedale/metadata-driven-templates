@@ -10,7 +10,7 @@
 <div id="templates">
 {% for page in pages %}
     <a class="card" href="{{ page.path }}" data-search="{{ [page.name, page.label, page.description, page.objects|map(o => o.name ~ ' ' ~ o.plural)|join(' ')]|join(' ')|lower }}">
-        <strong>{{ page.label }}</strong><span class="name">{{ page.name }} {{ page.version }}</span>
+        <strong>{{ page.label }}</strong><span class="name">{{ page.name }} {{ page.version }}{% if page.verified %} · verified vendor{% endif %}</span>
         {% if page.description %}<p>{{ page.description }}</p>{% endif %}
     </a>
 {% else %}

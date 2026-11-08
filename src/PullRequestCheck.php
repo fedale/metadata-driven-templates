@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Fedale\TemplateCatalog;
 
+use Fedale\TemplateCatalog\Owners\Maintainers;
+use Fedale\TemplateCatalog\Owners\MembershipUnknown;
+use Fedale\TemplateCatalog\Owners\OrganizationMembers;
 use Fedale\TemplateFormat\Format;
 use Fedale\TemplateFormat\InvalidPackage;
 use Fedale\TemplateFormat\Package;
@@ -27,12 +30,18 @@ use Fedale\TemplateFormat\Versions\VersionCheck;
  * yanked.yaml may yank a version, or list it again, of a vendor the author owns; or remove a
  * template (`vendor/name: all`), which then takes no new version until it is listed again.
  *
- * Anything else (vendors.yaml, catalog.pub, the tools) is left to the maintainers' review.
+ * vendors.yaml must stay valid, and only a maintainer (CODEOWNERS) verifies a vendor or stops
+ * verifying it. Anything else about it, and catalog.pub or the tools, is left to the
+ * maintainers' review.
+ *
+ * The author owns a vendor when listed among its owners, or when a public member of an
+ * organization listed there.
  */
 final readonly class PullRequestCheck
 {
     public const string TEMPLATES = 'templates';
     public const string YANKED = 'yanked.yaml';
+    public const string VENDORS = 'vendors.yaml';
 
     /**
      * 20 MB per version, files of the seeds included: well below GitHub's 50 MB warning per file
@@ -44,6 +53,7 @@ final readonly class PullRequestCheck
         private PackageDirectory $reader,
         private PackageChecker $checker,
         private ItemStates $states,
+        private OrganizationMembers $members,
     ) {
     }
 
@@ -65,6 +75,10 @@ final readonly class PullRequestCheck
             $parts = explode('/', $change->path);
             if (self::YANKED === $change->path) {
                 $problems = [...$problems, ...$this->checkYanked($root, $base, $author)];
+                continue;
+            }
+            if (self::VENDORS === $change->path) {
+                $problems = [...$problems, ...self::checkVendors($root, $base, $author)];
                 continue;
             }
             if (self::TEMPLATES !== $parts[0]) {
@@ -117,8 +131,8 @@ final readonly class PullRequestCheck
         }
         if (!$vendors->has($vendor)) {
             $problems[] = \sprintf('%s: The vendor "%s" is not registered: add it to vendors.yaml in a pull request of its own first.', $directory, $vendor);
-        } elseif (null !== $author && !$vendors->isOwner($vendor, $author)) {
-            $problems[] = \sprintf('%s: %s is not an owner of the vendor "%s" (vendors.yaml).', $directory, $author, $vendor);
+        } elseif (null !== $author && true !== ($owns = $this->owns($vendors, $vendor, $author))) {
+            $problems[] = \is_string($owns) ? \sprintf('%s: %s', $directory, $owns) : \sprintf('%s: %s is not an owner of the vendor "%s" (vendors.yaml).', $directory, $author, $vendor);
         }
 
         // Nothing is read through a link: the reader would follow it out of the checkout, and a
@@ -230,15 +244,64 @@ final readonly class PullRequestCheck
             if (Yanked::ALL === $version) {
                 if ([] === array_filter($base->published, static fn (string $directory): bool => str_starts_with($directory, self::TEMPLATES.'/'.$name.'/'))) {
                     $problems[] = \sprintf('%s: %s is not published.', self::YANKED, $name);
-                } elseif (null !== $author && !$base->vendors->isOwner($vendor, $author)) {
-                    $problems[] = \sprintf('%s: %s is not an owner of the vendor "%s": only its owners remove its templates.', self::YANKED, $author, $vendor);
+                } elseif (null !== $author && true !== ($owns = $this->owns($base->vendors, $vendor, $author))) {
+                    $problems[] = \is_string($owns) ? \sprintf('%s: %s', self::YANKED, $owns) : \sprintf('%s: %s is not an owner of the vendor "%s": only its owners remove its templates.', self::YANKED, $author, $vendor);
                 }
                 continue;
             }
             if (!\in_array(self::TEMPLATES.'/'.$name.'/'.$version, $base->published, true)) {
                 $problems[] = \sprintf('%s: %s %s is not published.', self::YANKED, $name, $version);
-            } elseif (null !== $author && !$base->vendors->isOwner($vendor, $author)) {
-                $problems[] = \sprintf('%s: %s is not an owner of the vendor "%s": only its owners yank its versions.', self::YANKED, $author, $vendor);
+            } elseif (null !== $author && true !== ($owns = $this->owns($base->vendors, $vendor, $author))) {
+                $problems[] = \is_string($owns) ? \sprintf('%s: %s', self::YANKED, $owns) : \sprintf('%s: %s is not an owner of the vendor "%s": only its owners yank its versions.', self::YANKED, $author, $vendor);
+            }
+        }
+
+        return $problems;
+    }
+
+    /**
+     * Whether the author owns the vendor: listed among its owners, or a public member of an
+     * organization listed there.
+     *
+     * @return bool|string true, false, or why GitHub could not tell
+     */
+    private function owns(Vendors $vendors, string $vendor, string $author): bool|string
+    {
+        if ($vendors->isOwner($vendor, $author)) {
+            return true;
+        }
+        foreach ($vendors->owners($vendor) as $owner) {
+            try {
+                if ($this->members->isPublicMember($owner, $author)) {
+                    return true;
+                }
+            } catch (MembershipUnknown $e) {
+                return $e->getMessage().' Run the check again.';
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * A change of vendors.yaml: still valid, and verified or unverified by a maintainer only.
+     *
+     * @return list<string>
+     */
+    private static function checkVendors(string $root, BaseBranch $base, ?string $author): array
+    {
+        $file = $root.'/'.self::VENDORS;
+        $content = is_file($file) && !is_link($file) ? file_get_contents($file) : '';
+        try {
+            $vendors = Vendors::fromYaml(false === $content ? '' : $content);
+        } catch (\InvalidArgumentException $e) {
+            return [$e->getMessage()];
+        }
+
+        $problems = [];
+        foreach ($vendors->verificationChanges($base->vendors) as $vendor) {
+            if (null !== $author && !($base->maintainers?->has($author) ?? false)) {
+                $problems[] = \sprintf('%s: %s: only the maintainers (%s) verify a vendor, or stop verifying it.', self::VENDORS, $vendor, Maintainers::CODEOWNERS);
             }
         }
 

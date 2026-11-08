@@ -6,6 +6,7 @@ declare(strict_types=1);
 use Fedale\TemplateCatalog\CatalogBuilder;
 use Fedale\TemplateCatalog\Command\BuildCommand;
 use Fedale\TemplateCatalog\Command\CheckCommand;
+use Fedale\TemplateCatalog\Owners\GitHubOrganizationMembers;
 use Fedale\TemplateCatalog\PullRequestCheck;
 use Fedale\TemplateCatalog\Site\SiteBuilder;
 use Fedale\TemplateFormat\Archive;
@@ -17,6 +18,7 @@ use Fedale\TemplateFormat\SchemaValidator;
 use Fedale\TemplateFormat\SeedRecords;
 use Fedale\TemplateFormat\Versions\ItemStates;
 use Symfony\Component\Console\Application;
+use Symfony\Component\HttpClient\HttpClient;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
@@ -24,6 +26,6 @@ $reader = new PackageDirectory(new DocumentCodec());
 $checker = new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords());
 
 $application = new Application('metadata-driven template catalog');
-$application->addCommand(new CheckCommand(new PullRequestCheck($reader, $checker, new ItemStates(new FieldTypeCatalog()))));
+$application->addCommand(new CheckCommand(new PullRequestCheck($reader, $checker, new ItemStates(new FieldTypeCatalog()), new GitHubOrganizationMembers(HttpClient::create(), getenv('GITHUB_TOKEN') ?: null))));
 $application->addCommand(new BuildCommand(new CatalogBuilder($reader, $checker, new Archive(), new SiteBuilder(new SeedRecords()))));
 $application->run();

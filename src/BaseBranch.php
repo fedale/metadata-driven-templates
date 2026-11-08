@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Fedale\TemplateCatalog;
 
+use Fedale\TemplateCatalog\Owners\Maintainers;
+
 /**
  * The catalog as the branch a pull request goes into has it, read from git: the pull request
  * cannot change what it is checked against.
@@ -19,6 +21,7 @@ final readonly class BaseBranch
         public Vendors $vendors,
         public array $published,
         public Yanked $yanked,
+        public ?Maintainers $maintainers = null,
     ) {
     }
 
@@ -32,6 +35,7 @@ final readonly class BaseBranch
                 Vendors::fromYaml($git->show($base, 'vendors.yaml') ?? ''),
                 $git->versionDirectories($base),
                 Yanked::fromYaml($git->show($base, 'yanked.yaml') ?? ''),
+                Maintainers::fromCodeowners($git->show($base, Maintainers::CODEOWNERS) ?? ''),
             );
         } catch (\InvalidArgumentException $e) {
             throw new \RuntimeException(\sprintf('The base branch is invalid: %s', $e->getMessage()), 0, $e);

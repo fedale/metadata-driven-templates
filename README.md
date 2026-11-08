@@ -22,7 +22,22 @@ acme:
 ```
 
 Open a pull request that adds your vendor, and nothing else. Once it's merged, you can publish
-under it. Owners are GitHub user logins: organizations and teams aren't supported yet.
+under it.
+
+Owners are GitHub logins of users or of organizations. A pull request from a **public member**
+of a listed organization counts as one from an owner: the check asks GitHub, and private
+memberships can't be seen, so make yours public (your profile, **Organizations**). Teams aren't
+supported.
+
+**Verified vendors.** `verified: true` under a vendor shows a *verified vendor* badge on its
+templates: the maintainers know who is behind it. Only a maintainer sets it, or takes it away,
+in a pull request of their own; the check refuses it from anyone else.
+
+```yaml
+acme:
+  owners: [mario-rossi, acme-corp]
+  verified: true
+```
 
 ### 2. Add a version
 

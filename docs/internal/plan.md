@@ -19,8 +19,9 @@ semver check on `feature/semver-check`, awaiting review.
   site is rebuilt at every merge and deployed at once, so the index and the archives never
   disagree, and there are no releases to keep in step. Pages serves 1 GB at most: the build
   stops at 900 MB, and archives move to Releases then.
-- **Owners are GitHub user logins** (`vendors.yaml`): the check compares them with the pull
-  request's author. Organizations and teams would need the GitHub API (membership); later.
+- **Owners are GitHub logins** (`vendors.yaml`): the check compares them with the pull
+  request's author; organizations since 2026-11-08, through their public members (C4).
+  Teams are not supported.
 - Repository: `fedale/metadata-driven-templates`; tools in PHP 8.4 (`Fedale\TemplateCatalog`,
   `symfony/console`, `symfony/process`), on `fedale/template-format`.
 
@@ -100,9 +101,16 @@ semver check on `feature/semver-check`, awaiting review.
      version. Reports: `.github/ISSUE_TEMPLATE/report-template.yml` (an issue form), and
      `SECURITY.md` with a contact link for private reports (GitHub's private vulnerability
      reporting, to enable in the repository's settings).
-   - Verified vendors (`verified: true` in `vendors.yaml`, set by maintainers only, shown on
-     the site) and organizations as owners (the author a public member, through the GitHub
-     API).
+   - **Verified vendors and organizations** — done (2026-11-08, `feature/vendors`):
+     `verified: true` in `vendors.yaml` (`Vendors::isVerified()`, unknown settings refused); a
+     change of it (`verificationChanges()`) only from a maintainer, the users of the base's
+     `.github/CODEOWNERS` (`Owners\Maintainers`, teams left out); a change of `vendors.yaml`
+     must also leave it valid. The site shows a *verified vendor* badge, `search.json` a
+     `verified` flag. Owners may be organizations: an author not listed owns the vendor when
+     a public member of a listed owner, asked through `GET
+     /orgs/{org}/public_members/{login}` (`Owners\GitHubOrganizationMembers`, the Action's
+     read-only `GITHUB_TOKEN` against the rate limit, 204 yes, 404 no, anything else a problem
+     "Run the check again", never a guess).
    - metadata-driven's phase 7 (`metadata:template:publish`).
 
 ## Not in scope
