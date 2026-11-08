@@ -1,0 +1,87 @@
+{% extends 'layout.html.twig' %}
+
+{% block description %}{{ page.description ?: page.label }}{% endblock %}
+
+{% block body %}
+<h1>{{ page.label }}</h1>
+{% if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
+<ul class="badges">
+    <li class="badge">{{ page.name }}</li>
+    <li class="badge">{{ page.version }}</li>
+    {% if page.license %}<li class="badge">{{ page.license }}</li>{% endif %}
+    {% for locale in page.locales %}<li class="badge">{{ locale }}</li>{% endfor %}
+    {% if page.yanked %}<li class="badge warn">every version yanked</li>{% endif %}
+</ul>
+
+<pre><code>symfony console metadata:template:install {{ page.name }}</code></pre>
+
+{% if page.readme is not null %}
+<div class="readme">{{ page.readme|raw }}</div>
+{% endif %}
+
+<h2>Objects</h2>
+{% for object in page.objects %}
+<h3>{{ object.plural }} <code>{{ object.name }}</code></h3>
+<div class="table-wrap">
+<table class="fields">
+    <thead><tr><th>Field</th><th>Label</th><th>Type</th><th></th></tr></thead>
+    <tbody>
+    {% for field in object.fields %}
+        <tr>
+            <td><code>{{ field.name }}</code></td>
+            <td>{{ field.label }}</td>
+            <td>{{ field.type }}{% if field.target is not null %} → {{ field.target }}{% endif %}</td>
+            <td class="flags">{{ [field.required ? 'required' : null, field.unique ? 'unique' : null]|filter(f => f is not null)|join(', ') }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% else %}
+<p>None.</p>
+{% endfor %}
+
+{% if page.forms is not empty %}
+<h2>Forms</h2>
+<ul>
+{% for form in page.forms %}
+    <li>{{ form.label }} <code>{{ form.name }}</code></li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% if page.seeds is not empty %}
+<h2>Data</h2>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>Object</th><th>Records</th><th>On upgrade</th></tr></thead>
+    <tbody>
+    {% for seed in page.seeds %}
+        <tr>
+            <td>{{ seed.object }}</td>
+            <td>{{ seed.records|number_format }}</td>
+            <td>{{ seed.managed ? 'kept in line with new versions' : 'yours once installed' }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endif %}
+
+<h2>Versions</h2>
+<div class="table-wrap">
+<table>
+    <thead><tr><th>Version</th><th>Requires</th><th>Archive</th></tr></thead>
+    <tbody>
+    {% for version in page.versions %}
+        <tr>
+            <td>{{ version.version }}{% if version.yanked %} <span class="badge warn">yanked</span>{% endif %}</td>
+            <td>{% for name, constraint in version.requires %}<code>{{ name }} {{ constraint }}</code>{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+            <td><a href="{{ root }}{{ version.url }}">.tar.gz</a><div class="hash">sha256 {{ version.sha256 }}</div></td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+<p>A yanked version is withdrawn: an install without a version skips it, and naming it still installs it.</p>
+{% endblock %}

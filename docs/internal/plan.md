@@ -3,8 +3,7 @@
 The brief is in metadata-driven's `docs/internal/template-plan.md`, section "The catalog". This
 file is the catalog's own plan: its phases and what was built.
 
-Status: **C1 and C2 done** (C2 on `feature/publish`), awaiting review before C3 (the static
-site).
+Status: **C1, C2 and C3 done** (C3 on `feature/site`, awaiting review); next: C4.
 
 ## Decisions
 
@@ -61,9 +60,26 @@ site).
      base: vendors, published versions, yanked versions).
    - Index address: `https://fedale.github.io/metadata-driven-templates/index.json`.
    - The format library is checked out at its `main`: pin it to a tag once it has one.
-3. **C3 — the static site**: a page per template (README, objects and fields read from the
-   documents, versions, requires, license), a search page, and a JSON search file; built by the
-   same Action.
+3. **C3 — the static site** — done (2026-11-08). As built:
+   - `SiteBuilder` (`src/Site/`), called by `CatalogBuilder::build()` once the index and the
+     archives are written, from the same checked packages: `index.html` (every template, a
+     search box filtering the list in the browser; without JavaScript the list stays whole, and
+     how to point an instance at the catalog), `templates/<vendor>/<name>/index.html` and
+     `search.json` (name, label, description, version, license, objects, url).
+   - `TemplatePage`: a template's page shows its **current version**, the newest not yanked
+     (the newest of all when every one is), as an install without a version takes it: label,
+     description, license, languages, the install command, the README, objects and fields (a
+     relation names its target by its plural label), composite forms, seeds (records counted,
+     managed or once), then every version newest first (yanked flag, requires, archive and
+     sha256).
+   - **Authors' text is untrusted**: Twig with HTML autoescape and strict variables
+     (`resources/site/`); the optional `README.md` of a version through league/commonmark
+     (GitHub-flavored) with raw HTML escaped and unsafe links dropped, 100 kB read at most.
+     Inline CSS (light and dark) and script, no external resource.
+   - Relative links only (the site lives under `/metadata-driven-templates/`); the absolute
+     address appears once, in the instructions, from `--site-url` (default
+     `CatalogBuilder::SITE_URL`). No date in the pages: the same sources, the same site.
+   - No per-version pages: older versions are listed with their archives only.
 4. **C4 — the rest**: removal of a template (every version yanked), issue templates for
    reports, verified vendors, organizations as owners, the semver check against the previous
    version's items (the item comparison is in metadata-driven today: move it into the format

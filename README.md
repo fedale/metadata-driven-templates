@@ -32,6 +32,7 @@ its manifest (`template.yaml`), its documents, and the CSV and files of its seed
 ```
 templates/acme/shop/1.1.0/
   template.yaml
+  README.md              # optional: shown on the template's page
   objects/product.yaml
   forms/catalogue.yaml
   seeds/products.csv
@@ -40,6 +41,10 @@ templates/acme/shop/1.1.0/
 
 Write it in metadata-driven with `metadata:template:export`, and check it there with
 `metadata:template:validate` before you open the pull request.
+
+A `README.md` at the root of the version is optional: the template's page shows it, in
+GitHub-flavored Markdown (raw HTML is shown as text, `javascript:`, `vbscript:`, `file:` and
+non-image `data:` links are dropped, 100 kB at most). It travels in the archive too.
 
 The pull request must come from an owner of the vendor, and may only add version directories:
 
@@ -59,7 +64,10 @@ When it passes, a maintainer reviews the template and merges it.
 ### 4. Publication
 
 Once merged, the **Publish** action packs every version, lists it in the signed index and
-deploys both on GitHub Pages, within a few minutes. Your version is then installable:
+deploys them on GitHub Pages with the catalog's pages, within a few minutes: the home page
+(every template, searchable), a page per template at `templates/<vendor>/<name>/` (its README,
+objects and fields, forms, data, versions) and `search.json`, the same list for tools. Your
+version is then installable:
 
 ```bash
 bin/console metadata:template:install acme/shop@1.1.0
@@ -99,6 +107,7 @@ cloned next to this repository as `template-format`:
 composer install
 bin/catalog check --base=origin/main
 bin/catalog build --unsigned --output=/tmp/catalog-site   # the site, unsigned: to look at only
+php -S 127.0.0.1:8000 -t /tmp/catalog-site                 # then open http://127.0.0.1:8000
 ```
 
 ## For maintainers

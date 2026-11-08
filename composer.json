@@ -6,9 +6,11 @@
     "require": {
         "php": ">=8.4",
         "fedale/template-format": "1.0.x-dev",
+        "league/commonmark": "^2.7",
         "symfony/console": "^8.0",
         "symfony/process": "^8.0",
-        "symfony/yaml": "^8.0"
+        "symfony/yaml": "^8.0",
+        "twig/twig": "^3.0"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95",

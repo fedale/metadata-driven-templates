@@ -7,6 +7,7 @@ use Fedale\TemplateCatalog\CatalogBuilder;
 use Fedale\TemplateCatalog\Command\BuildCommand;
 use Fedale\TemplateCatalog\Command\CheckCommand;
 use Fedale\TemplateCatalog\PullRequestCheck;
+use Fedale\TemplateCatalog\Site\SiteBuilder;
 use Fedale\TemplateFormat\Archive;
 use Fedale\TemplateFormat\DocumentCodec;
 use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
@@ -23,5 +24,5 @@ $checker = new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new
 
 $application = new Application('metadata-driven template catalog');
 $application->addCommand(new CheckCommand(new PullRequestCheck($reader, $checker)));
-$application->addCommand(new BuildCommand(new CatalogBuilder($reader, $checker, new Archive())));
+$application->addCommand(new BuildCommand(new CatalogBuilder($reader, $checker, new Archive(), new SiteBuilder(new SeedRecords()))));
 $application->run();
