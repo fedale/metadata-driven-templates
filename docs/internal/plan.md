@@ -111,7 +111,9 @@ semver check on `feature/semver-check`, awaiting review.
      /orgs/{org}/public_members/{login}` (`Owners\GitHubOrganizationMembers`, the Action's
      read-only `GITHUB_TOKEN` against the rate limit, 204 yes, 404 no, anything else a problem
      "Run the check again", never a guess).
-   - metadata-driven's phase 7 (`metadata:template:publish`).
+   - **metadata-driven's phase 7** — done (2026-11-08): `metadata:template:publish` checks a
+     version against a checkout of this repository as `PullRequestCheck` would (ownership
+     aside), copies it to its version directory and prints the git commands. C4 is complete.
 
 ## Not in scope
 

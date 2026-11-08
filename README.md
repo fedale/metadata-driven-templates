@@ -54,8 +54,16 @@ templates/acme/shop/1.1.0/
   files/products/oslo.png
 ```
 
-Write it in metadata-driven with `metadata:template:export`, and check it there with
-`metadata:template:validate` before you open the pull request.
+Write it in metadata-driven with `metadata:template:export`, then let metadata-driven put it
+here: with a checkout of this repository up to date,
+
+```bash
+bin/console metadata:template:publish /path/to/your/template --catalog=../metadata-driven-templates --dry-run
+bin/console metadata:template:publish /path/to/your/template --catalog=../metadata-driven-templates
+```
+
+It runs the checks below against the checkout, copies the version to
+`templates/<vendor>/<name>/<version>/` and prints the git commands to open the pull request.
 
 A `README.md` at the root of the version is optional: the template's page shows it, in
 GitHub-flavored Markdown (raw HTML is shown as text, `javascript:`, `vbscript:`, `file:` and
