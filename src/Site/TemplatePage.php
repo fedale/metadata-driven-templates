@@ -45,13 +45,14 @@ final readonly class TemplatePage
         public array $seeds,
         public array $locales,
         public ?string $readme,
+        public bool $removed = false,
     ) {
     }
 
     /**
      * @param list<array{Package, IndexEntry}> $versions every version of one template, any order
      */
-    public static function of(array $versions, SeedRecords $records): self
+    public static function of(array $versions, SeedRecords $records, bool $removed = false): self
     {
         usort($versions, static fn (array $a, array $b): int => version_compare($b[0]->version(), $a[0]->version()));
         $current = $versions[0];
@@ -114,6 +115,7 @@ final readonly class TemplatePage
             $seeds,
             array_values(array_unique($locales)),
             self::readme($package),
+            $removed,
         );
     }
 

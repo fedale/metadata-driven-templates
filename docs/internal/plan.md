@@ -91,8 +91,15 @@ semver check on `feature/semver-check`, awaiting review.
      migration steps count when the manifest has some for a version after the listed one. Run
      only once the version is otherwise valid and higher. Versions added together, with none
      listed before, are not compared with each other.
-   - Removal of a template: `vendor/name: all` in `yanked.yaml` (every version, future ones
-     too); issue templates for reports.
+   - **Removal and reports** — done (2026-11-08, `feature/template-removal`, branched from
+     `feature/semver-check`): `vendor/name: all` in `yanked.yaml` (`Yanked::ALL`,
+     `isRemoved()`, a change of it is `[name, "all"]` in `differences()`). The index flags
+     every version yanked (signed); the home page and `search.json` leave the template out, its
+     page stays, marked removed, with the install command naming a version. The check: only an
+     owner removes or lists again, a published template only; a removed template takes no new
+     version. Reports: `.github/ISSUE_TEMPLATE/report-template.yml` (an issue form), and
+     `SECURITY.md` with a contact link for private reports (GitHub's private vulnerability
+     reporting, to enable in the repository's settings).
    - Verified vendors (`verified: true` in `vendors.yaml`, set by maintainers only, shown on
      the site) and organizations as owners (the author a public member, through the GitHub
      API).

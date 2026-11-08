@@ -90,6 +90,24 @@ acme/shop: [1.1.0]
 A yanked version is hidden from new installs and upgrades, and stays installable by its exact
 version. Only an owner of the vendor can yank its versions, or list them again.
 
+### Removing a template
+
+`all` in place of the list yanks every version, and the catalog stops listing the template:
+
+```yaml
+acme/old-shop: all
+```
+
+Its page stays, marked as removed, and its versions stay installable by their exact version.
+A removed template takes no new version until it is listed again (the line taken out of
+`yanked.yaml`, by an owner of the vendor).
+
+## Reporting a template
+
+A template that does not install, does not do what its page says, or uses content its license
+does not allow: open an issue, **Issues → New issue → Report a template**. Something malicious
+is reported privately, never in an issue: see [SECURITY.md](SECURITY.md).
+
 ## Using the catalog in metadata-driven
 
 Set these two variables in metadata-driven's environment:
