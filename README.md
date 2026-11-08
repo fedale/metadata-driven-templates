@@ -52,6 +52,11 @@ The pull request must come from an owner of the vendor, and may only add version
   to fix something, publish a new version.
 - **The version is higher** than every version already listed, and the directory matches the
   manifest's `id` and `version`.
+- **The number fits the changes** against the highest version listed, with the rules
+  metadata-driven applies when it upgrades: a **patch** changes labels, layouts, forms and
+  translations only; a **minor** may also add objects and fields and change their settings,
+  conditions, search and unique sets; removing or renaming anything, or carrying migration
+  steps, needs a **major**. Seed records are not compared.
 - **The template is valid**: every document against its schema, ids, references, seeds and
   files, as metadata-driven checks them.
 - **20 MB at most** per version, files of the seeds included. No symbolic links.
@@ -99,9 +104,9 @@ the key.
 
 ## Checking locally
 
-You need PHP 8.4 and Composer, with
-[`fedale/metadata-driven-template-format`](https://github.com/fedale/metadata-driven-template-format)
-cloned next to this repository as `template-format`:
+You need PHP 8.4 and Composer; the tools use
+[`fedale/template-format`](https://packagist.org/packages/fedale/template-format), from
+Packagist:
 
 ```bash
 composer install

@@ -6,9 +6,12 @@ namespace Fedale\TemplateCatalog;
 
 use Fedale\TemplateFormat\Format;
 use Fedale\TemplateFormat\InvalidPackage;
+use Fedale\TemplateFormat\Package;
 use Fedale\TemplateFormat\PackageChecker;
 use Fedale\TemplateFormat\PackageDirectory;
 use Fedale\TemplateFormat\Problem;
+use Fedale\TemplateFormat\Versions\ItemStates;
+use Fedale\TemplateFormat\Versions\VersionCheck;
 
 /**
  * What a pull request must satisfy before a maintainer reviews it.
@@ -17,7 +20,9 @@ use Fedale\TemplateFormat\Problem;
  * templates/<vendor>/<name>/<version>/: a published version never changes, since installations
  * compare against it when they upgrade. Each added version must be a valid package (the format
  * library's checks), match its path, be higher than the versions already listed, stay under the
- * size limit, and belong to a vendor the author owns.
+ * size limit, and belong to a vendor the author owns. Its number must fit what it changed
+ * against the highest version already listed (VersionCheck, the rules metadata-driven applies
+ * when it upgrades): installations rely on a minor version removing nothing.
  *
  * yanked.yaml may yank a version, or list it again, of a vendor the author owns.
  *
@@ -37,6 +42,7 @@ final readonly class PullRequestCheck
     public function __construct(
         private PackageDirectory $reader,
         private PackageChecker $checker,
+        private ItemStates $states,
     ) {
     }
 
@@ -137,7 +143,65 @@ final readonly class PullRequestCheck
             $problems[] = \sprintf('%s: The manifest says %s %s: the directory must be templates/%s/%s/.', $directory, $package->name(), $package->version(), $package->name(), $package->version());
         }
 
-        return [...$problems, ...self::located($directory, $this->checker->check($package))];
+        $structure = self::located($directory, $this->checker->check($package));
+        if ([] !== $structure || [] !== $newer) {
+            return [...$problems, ...$structure];
+        }
+
+        return [...$problems, ...$this->checkNumber($root, $package, $directory, $listed)];
+    }
+
+    /**
+     * Whether the version's number fits what it changed against the highest version listed. The
+     * listed versions are read from the checkout: a pull request cannot change them (checked
+     * above), so they are the published ones.
+     *
+     * @param list<string> $listed
+     *
+     * @return list<string>
+     */
+    private function checkNumber(string $root, Package $package, string $directory, array $listed): array
+    {
+        if ([] === $listed) {
+            return [];
+        }
+        usort($listed, static fn (string $a, string $b): int => version_compare($a, $b));
+        $previous = end($listed);
+        $previousDirectory = self::TEMPLATES.'/'.$package->name().'/'.$previous;
+        $links = Links::in($root, $previousDirectory);
+        if ([] !== $links) {
+            return $links;
+        }
+        try {
+            $before = $this->reader->read($root.'/'.$previousDirectory);
+        } catch (InvalidPackage $e) {
+            return [\sprintf('%s: The previous version, %s, cannot be read to compare with it.', $directory, $previous)];
+        }
+
+        $problems = VersionCheck::problems(
+            $this->states->of($before),
+            $this->states->of($package),
+            $previous,
+            $package->version(),
+            self::migrates($package, $previous),
+        );
+
+        return array_map(static fn (string $problem): string => $directory.'/'.$problem, $problems);
+    }
+
+    /**
+     * Whether the manifest carries migration steps for a version after $previous, up to its own.
+     */
+    private static function migrates(Package $package, string $previous): bool
+    {
+        $migrations = $package->manifest->spec['migrations'] ?? null;
+        foreach (\is_array($migrations) ? $migrations : [] as $version => $steps) {
+            if (version_compare((string) $version, $previous, '>') && version_compare((string) $version, $package->version(), '<=') && [] !== $steps) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

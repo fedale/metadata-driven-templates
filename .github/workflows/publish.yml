@@ -34,13 +34,6 @@ jobs:
           path: catalog
           persist-credentials: false
 
-      - name: The template format, beside the tools (composer.json's path repository)
-        uses: actions/checkout@v4
-        with:
-          repository: fedale/metadata-driven-template-format
-          path: template-format
-          persist-credentials: false
-
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'

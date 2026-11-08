@@ -5,7 +5,7 @@
     "license": "MIT",
     "require": {
         "php": ">=8.4",
-        "fedale/template-format": "1.0.x-dev",
+        "fedale/template-format": "^1.1",
         "league/commonmark": "^2.7",
         "symfony/console": "^8.0",
         "symfony/process": "^8.0",
@@ -17,17 +17,6 @@
         "phpstan/phpstan": "^2.3",
         "phpunit/phpunit": "^13.4"
     },
-    "repositories": [{
-        "name": "template-format",
-        "type": "path",
-        "url": "../template-format",
-        "options": {
-            "symlink": true,
-            "versions": {
-                "fedale/template-format": "1.0.x-dev"
-            }
-        }
-    }],
     "autoload": {
         "psr-4": {
             "Fedale\\TemplateCatalog\\": "src/"
