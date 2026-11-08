@@ -7,6 +7,7 @@
 {% if page.description %}<p class="lead">{{ page.description }}</p>{% endif %}
 <ul class="badges">
     <li class="badge">{{ page.name }}</li>
+    {% if page.verified %}<li class="badge" title="The maintainers know who is behind this vendor">verified vendor</li>{% endif %}
     <li class="badge">{{ page.version }}</li>
     {% if page.license %}<li class="badge">{{ page.license }}</li>{% endif %}
     {% for locale in page.locales %}<li class="badge">{{ locale }}</li>{% endfor %}

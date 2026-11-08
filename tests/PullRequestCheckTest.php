@@ -6,7 +6,9 @@ namespace Fedale\TemplateCatalog\Tests;
 
 use Fedale\TemplateCatalog\BaseBranch;
 use Fedale\TemplateCatalog\ChangedFile;
+use Fedale\TemplateCatalog\Owners\Maintainers;
 use Fedale\TemplateCatalog\PullRequestCheck;
+use Fedale\TemplateCatalog\Tests\Support\PublicMembers;
 use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
 use Fedale\TemplateCatalog\Vendors;
 use Fedale\TemplateCatalog\Yanked;
@@ -182,6 +184,57 @@ final class PullRequestCheckTest extends TestCase
         );
     }
 
+    public function testAPublicMemberOfAnOwningOrganizationPublishes(): void
+    {
+        $added = $this->added($this->addVersion('1.0.0'));
+        $vendors = "acme:\n  owners: [mario-rossi, acme-corp]\n";
+        $members = new PublicMembers(['acme-corp' => ['anna']]);
+
+        self::assertSame([], $this->check($added, author: 'anna', members: $members, vendors: $vendors));
+        // A listed owner needs no question to GitHub.
+        $listed = new PublicMembers();
+        self::assertSame([], $this->check($added, author: 'mario-rossi', members: $listed, vendors: $vendors));
+        self::assertSame([], $listed->asked);
+
+        self::assertSame(
+            ['templates/acme/shop/1.0.0: bruno is not an owner of the vendor "acme" (vendors.yaml).'],
+            $this->check($added, author: 'bruno', members: $members, vendors: $vendors),
+        );
+    }
+
+    public function testNoGuessWhenGitHubCannotBeAsked(): void
+    {
+        self::assertSame(
+            ['templates/acme/shop/1.0.0: GitHub answered 503 when asked whether anna is a public member of acme-corp. Run the check again.'],
+            $this->check($this->added($this->addVersion('1.0.0')), author: 'anna', members: new PublicMembers(unreachable: true), vendors: "acme:\n  owners: [acme-corp]\n"),
+        );
+    }
+
+    public function testOnlyAMaintainerVerifiesAVendor(): void
+    {
+        file_put_contents($this->root.'/vendors.yaml', "acme:\n  owners: [mario-rossi]\n  verified: true\n");
+        $changes = [new ChangedFile('M', 'vendors.yaml')];
+
+        self::assertSame(
+            ['vendors.yaml: acme: only the maintainers (.github/CODEOWNERS) verify a vendor, or stop verifying it.'],
+            $this->check($changes, author: 'mario-rossi'),
+        );
+        self::assertSame([], $this->check($changes, author: 'Fedale'));
+        // Stopping: the same rule.
+        file_put_contents($this->root.'/vendors.yaml', "acme:\n  owners: [mario-rossi]\n");
+        self::assertSame(
+            ['vendors.yaml: acme: only the maintainers (.github/CODEOWNERS) verify a vendor, or stop verifying it.'],
+            $this->check($changes, author: 'mario-rossi', vendors: "acme:\n  owners: [mario-rossi]\n  verified: true\n"),
+        );
+    }
+
+    public function testVendorsYamlMustStayValid(): void
+    {
+        file_put_contents($this->root.'/vendors.yaml', "acme:\n  owners: [mario-rossi]\n  verified: yes please\n");
+
+        self::assertSame(['vendors.yaml: acme: verified is true or false.'], $this->check([new ChangedFile('M', 'vendors.yaml')]));
+    }
+
     public function testTheManifestMustMatchItsDirectory(): void
     {
         $this->published[] = $this->addVersion('1.0.0');
@@ -308,15 +361,16 @@ final class PullRequestCheckTest extends TestCase
      *
      * @return list<string>
      */
-    private function check(array $changes, ?string $author = 'mario-rossi'): array
+    private function check(array $changes, ?string $author = 'mario-rossi', ?PublicMembers $members = null, string $vendors = "acme:\n  owners: [mario-rossi]\n"): array
     {
         $check = new PullRequestCheck(
             new PackageDirectory(new DocumentCodec()),
             new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
             new ItemStates(new FieldTypeCatalog()),
+            $members ?? new PublicMembers(),
         );
 
-        return $check->check($this->root, $changes, new BaseBranch(Vendors::fromYaml("acme:\n  owners: [mario-rossi]\n"), $this->published, Yanked::fromYaml($this->yanked)), $author);
+        return $check->check($this->root, $changes, new BaseBranch(Vendors::fromYaml($vendors), $this->published, Yanked::fromYaml($this->yanked), Maintainers::fromCodeowners("* @fedale\n")), $author);
     }
 
     /**

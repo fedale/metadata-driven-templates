@@ -22,7 +22,22 @@ acme:
 ```
 
 Open a pull request that adds your vendor, and nothing else. Once it's merged, you can publish
-under it. Owners are GitHub user logins: organizations and teams aren't supported yet.
+under it.
+
+Owners are GitHub logins of users or of organizations. A pull request from a **public member**
+of a listed organization counts as one from an owner: the check asks GitHub, and private
+memberships can't be seen, so make yours public (your profile, **Organizations**). Teams aren't
+supported.
+
+**Verified vendors.** `verified: true` under a vendor shows a *verified vendor* badge on its
+templates: the maintainers know who is behind it. Only a maintainer sets it, or takes it away,
+in a pull request of their own; the check refuses it from anyone else.
+
+```yaml
+acme:
+  owners: [mario-rossi, acme-corp]
+  verified: true
+```
 
 ### 2. Add a version
 
@@ -39,8 +54,16 @@ templates/acme/shop/1.1.0/
   files/products/oslo.png
 ```
 
-Write it in metadata-driven with `metadata:template:export`, and check it there with
-`metadata:template:validate` before you open the pull request.
+Write it in metadata-driven with `metadata:template:export`, then let metadata-driven put it
+here: with a checkout of this repository up to date,
+
+```bash
+bin/console metadata:template:publish /path/to/your/template --catalog=../metadata-driven-templates --dry-run
+bin/console metadata:template:publish /path/to/your/template --catalog=../metadata-driven-templates
+```
+
+It runs the checks below against the checkout, copies the version to
+`templates/<vendor>/<name>/<version>/` and prints the git commands to open the pull request.
 
 A `README.md` at the root of the version is optional: the template's page shows it, in
 GitHub-flavored Markdown (raw HTML is shown as text, `javascript:`, `vbscript:`, `file:` and

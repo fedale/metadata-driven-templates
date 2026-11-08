@@ -57,6 +57,8 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
+          # Read-only: lifts the API's rate limit for the organizations' public members.
+          GITHUB_TOKEN: ${{ github.token }}
         run: bin/catalog check --repository=../pull-request --base="$BASE" --author="$AUTHOR"
 
   # The tools' own tests, when a pull request changes them.

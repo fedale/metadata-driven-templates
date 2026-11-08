@@ -98,7 +98,7 @@ final readonly class CatalogBuilder
                 throw new BuildFailed([\sprintf('%s/%s: The file cannot be written.', $output, $file)]);
             }
         }
-        $this->site->build($packages, $entries, $output, $siteUrl, $publicKey, $yanked->removed());
+        $this->site->build($packages, $entries, $output, $siteUrl, $publicKey, $yanked->removed(), $this->vendors($root));
 
         return $entries;
     }
@@ -178,6 +178,19 @@ final readonly class CatalogBuilder
         }
 
         return $yanked;
+    }
+
+    /**
+     * @throws BuildFailed vendors.yaml is invalid
+     */
+    private function vendors(string $root): Vendors
+    {
+        $file = $root.'/'.PullRequestCheck::VENDORS;
+        try {
+            return Vendors::fromYaml(is_file($file) && !is_link($file) ? (string) file_get_contents($file) : '');
+        } catch (\InvalidArgumentException $e) {
+            throw new BuildFailed([$e->getMessage()]);
+        }
     }
 
     /**

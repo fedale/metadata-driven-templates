@@ -6,6 +6,7 @@ namespace Fedale\TemplateCatalog\Tests\Command;
 
 use Fedale\TemplateCatalog\Command\CheckCommand;
 use Fedale\TemplateCatalog\PullRequestCheck;
+use Fedale\TemplateCatalog\Tests\Support\PublicMembers;
 use Fedale\TemplateCatalog\Tests\Support\TemporaryCatalog;
 use Fedale\TemplateFormat\DocumentCodec;
 use Fedale\TemplateFormat\FieldTypes\FieldTypeCatalog;
@@ -98,6 +99,7 @@ final class CheckCommandTest extends TestCase
             new PackageDirectory(new DocumentCodec()),
             new PackageChecker(new SchemaValidator(), new FieldTypeCatalog(), new SeedRecords()),
             new ItemStates(new FieldTypeCatalog()),
+            new PublicMembers(),
         )));
         $tester->execute($options + ['--base' => 'main', '--repository' => $this->root]);
 

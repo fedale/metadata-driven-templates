@@ -77,6 +77,7 @@ final class SiteBuilderTest extends TestCase
             'description' => 'Products, their categories and their tags.',
             'version' => '1.1.0',
             'license' => 'MIT',
+            'verified' => false,
             'objects' => ['category', 'product', 'tag'],
             'url' => 'templates/acme/shop/',
         ]]], json_decode($site['search.json'], true));
@@ -92,6 +93,16 @@ final class SiteBuilderTest extends TestCase
         self::assertStringContainsString('removed from the catalog', $site['templates/acme/shop/index.html']);
         // Installable by its exact version only: the command names one.
         self::assertStringContainsString('metadata:template:install acme/shop@1.1.0', $site['templates/acme/shop/index.html']);
+    }
+
+    public function testAVerifiedVendorIsShown(): void
+    {
+        file_put_contents($this->root.'/vendors.yaml', "acme:\n  owners: [mario-rossi]\n  verified: true\n");
+        $site = $this->build();
+
+        self::assertStringContainsString('verified vendor', $site['templates/acme/shop/index.html']);
+        self::assertStringContainsString('verified vendor', $site['index.html']);
+        self::assertStringContainsString('"verified": true', $site['search.json']);
     }
 
     public function testWhatTheAuthorsWriteIsEscaped(): void

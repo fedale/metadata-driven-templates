@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Fedale\TemplateCatalog\Site;
 
 use Fedale\TemplateCatalog\BuildFailed;
+use Fedale\TemplateCatalog\Vendors;
 use Fedale\TemplateFormat\IndexEntry;
 use Fedale\TemplateFormat\Package;
 use Fedale\TemplateFormat\SeedRecords;
@@ -42,17 +43,18 @@ final readonly class SiteBuilder
      * @param string|null            $publicKey the catalog's public key; null for an unsigned build
      * @param list<string>           $removed   the templates removed from the catalog (yanked.yaml:
      *                                          all): their pages stay, the lists leave them out
+     * @param Vendors|null           $vendors   which vendors the maintainers verified
      *
      * @throws BuildFailed
      */
-    public function build(array $packages, array $entries, string $output, string $siteUrl, ?string $publicKey, array $removed = []): void
+    public function build(array $packages, array $entries, string $output, string $siteUrl, ?string $publicKey, array $removed = [], ?Vendors $vendors = null): void
     {
         $byName = [];
         foreach (array_values($packages) as $i => $package) {
             $byName[$package->name()][] = [$package, $entries[$i]];
         }
         ksort($byName);
-        $pages = array_map(fn (array $versions): TemplatePage => TemplatePage::of($versions, $this->records, \in_array($versions[0][0]->name(), $removed, true)), array_values($byName));
+        $pages = array_map(fn (array $versions): TemplatePage => TemplatePage::of($versions, $this->records, \in_array($versions[0][0]->name(), $removed, true), $vendors?->isVerified(explode('/', $versions[0][0]->name())[0]) ?? false), array_values($byName));
         $listed = array_values(array_filter($pages, static fn (TemplatePage $page): bool => !$page->removed));
 
         foreach ($pages as $page) {
@@ -76,6 +78,7 @@ final readonly class SiteBuilder
                 'description' => $page->description,
                 'version' => $page->version,
                 'license' => $page->license,
+                'verified' => $page->verified,
                 'objects' => array_map(static fn (array $object): string => $object['name'], $page->objects),
                 'url' => $page->path(),
             ], $listed),

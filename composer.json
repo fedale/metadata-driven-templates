@@ -8,6 +8,7 @@
         "fedale/template-format": "^1.1",
         "league/commonmark": "^2.7",
         "symfony/console": "^8.0",
+        "symfony/http-client": "^8.0",
         "symfony/process": "^8.0",
         "symfony/yaml": "^8.0",
         "twig/twig": "^3.0"
