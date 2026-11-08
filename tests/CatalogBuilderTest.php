@@ -61,6 +61,19 @@ final class CatalogBuilderTest extends TestCase
         self::assertSame($this->keys['public']."\n", file_get_contents($this->root.'/site/catalog.pub'));
     }
 
+    public function testARemovedTemplateHasEveryVersionYanked(): void
+    {
+        file_put_contents($this->root.'/yanked.yaml', "acme/shop: all\n");
+        $this->builder()->build($this->root, $this->root.'/site', $this->keys['secret']);
+
+        $index = TemplateIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
+        foreach ($index->versions('acme/shop') as $entry) {
+            self::assertTrue($entry->yanked, $entry->version);
+            // The flag is signed: no one without the key lists them again.
+            self::assertTrue(Signature::verify($entry, $this->keys['public']));
+        }
+    }
+
     public function testTheSameSourcesGiveTheSameSite(): void
     {
         $this->builder()->build($this->root, $this->root.'/first', $this->keys['secret']);

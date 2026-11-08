@@ -82,6 +82,18 @@ final class SiteBuilderTest extends TestCase
         ]]], json_decode($site['search.json'], true));
     }
 
+    public function testARemovedTemplateKeepsItsPageOnly(): void
+    {
+        file_put_contents($this->root.'/yanked.yaml', "acme/shop: all\n");
+        $site = $this->build();
+
+        self::assertStringNotContainsString('templates/acme/shop/', $site['index.html']);
+        self::assertSame(['templates' => []], json_decode($site['search.json'], true));
+        self::assertStringContainsString('removed from the catalog', $site['templates/acme/shop/index.html']);
+        // Installable by its exact version only: the command names one.
+        self::assertStringContainsString('metadata:template:install acme/shop@1.1.0', $site['templates/acme/shop/index.html']);
+    }
+
     public function testWhatTheAuthorsWriteIsEscaped(): void
     {
         $manifest = $this->root.'/templates/acme/shop/1.1.0/template.yaml';

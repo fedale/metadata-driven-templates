@@ -10,10 +10,15 @@
     <li class="badge">{{ page.version }}</li>
     {% if page.license %}<li class="badge">{{ page.license }}</li>{% endif %}
     {% for locale in page.locales %}<li class="badge">{{ locale }}</li>{% endfor %}
-    {% if page.yanked %}<li class="badge warn">every version yanked</li>{% endif %}
+    {% if page.removed %}<li class="badge warn">removed from the catalog</li>{% elseif page.yanked %}<li class="badge warn">every version yanked</li>{% endif %}
 </ul>
+{% if page.removed %}
+<p class="lead">This template was removed from the catalog: new installations should not use it.
+    Its versions stay installable by their exact version, for the installations that rely on
+    them to upgrade.</p>
+{% endif %}
 
-<pre><code>symfony console metadata:template:install {{ page.name }}</code></pre>
+<pre><code>symfony console metadata:template:install {{ page.name }}{{ page.removed or page.yanked ? '@' ~ page.version : '' }}</code></pre>
 
 {% if page.readme is not null %}
 <div class="readme">{{ page.readme|raw }}</div>
