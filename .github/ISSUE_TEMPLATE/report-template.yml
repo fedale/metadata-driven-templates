@@ -1,0 +1,48 @@
+name: Report a template
+description: A published template is broken, misleading, or breaks its license.
+title: "[report] vendor/name version"
+labels: [report]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The maintainers read every report; a template that harms the
+        people who install it is removed from the catalog (its versions stay installable by
+        exact version, for the installations that rely on them to upgrade).
+
+        **Something malicious** (a template meant to harm, data that should not be public): do
+        not describe it here, in public. Report it privately instead, through **Security →
+        Report a vulnerability** (see SECURITY.md).
+  - type: input
+    id: template
+    attributes:
+      label: Template
+      description: Its name, vendor/name.
+      placeholder: acme/shop
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The version you installed or looked at; empty for every version.
+      placeholder: 1.2.0
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is wrong
+      options:
+        - It does not install, or an upgrade fails
+        - It does not do what its page says
+        - Its data is wrong or out of date
+        - It uses content its license does not allow
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: What you did, what happened, and the messages metadata-driven printed.
+    validations:
+      required: true

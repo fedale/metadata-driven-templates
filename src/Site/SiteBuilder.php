@@ -40,17 +40,20 @@ final readonly class SiteBuilder
      * @param list<IndexEntry>       $entries   their entries in the index, in the same order
      * @param string                 $siteUrl   where the site is served, ending with "/"
      * @param string|null            $publicKey the catalog's public key; null for an unsigned build
+     * @param list<string>           $removed   the templates removed from the catalog (yanked.yaml:
+     *                                          all): their pages stay, the lists leave them out
      *
      * @throws BuildFailed
      */
-    public function build(array $packages, array $entries, string $output, string $siteUrl, ?string $publicKey): void
+    public function build(array $packages, array $entries, string $output, string $siteUrl, ?string $publicKey, array $removed = []): void
     {
         $byName = [];
         foreach (array_values($packages) as $i => $package) {
             $byName[$package->name()][] = [$package, $entries[$i]];
         }
         ksort($byName);
-        $pages = array_map(fn (array $versions): TemplatePage => TemplatePage::of($versions, $this->records), array_values($byName));
+        $pages = array_map(fn (array $versions): TemplatePage => TemplatePage::of($versions, $this->records, \in_array($versions[0][0]->name(), $removed, true)), array_values($byName));
+        $listed = array_values(array_filter($pages, static fn (TemplatePage $page): bool => !$page->removed));
 
         foreach ($pages as $page) {
             $this->write($output.'/'.$page->path().'index.html', $this->render('template.html.twig', [
@@ -61,7 +64,7 @@ final readonly class SiteBuilder
         }
         $this->write($output.'/index.html', $this->render('home.html.twig', [
             'root' => '',
-            'pages' => $pages,
+            'pages' => $listed,
             'title' => null,
             'index_url' => $siteUrl.'index.json',
             'public_key' => $publicKey,
@@ -75,7 +78,7 @@ final readonly class SiteBuilder
                 'license' => $page->license,
                 'objects' => array_map(static fn (array $object): string => $object['name'], $page->objects),
                 'url' => $page->path(),
-            ], $pages),
+            ], $listed),
         ], \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE | \JSON_THROW_ON_ERROR)."\n");
     }
 

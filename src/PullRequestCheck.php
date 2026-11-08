@@ -24,7 +24,8 @@ use Fedale\TemplateFormat\Versions\VersionCheck;
  * against the highest version already listed (VersionCheck, the rules metadata-driven applies
  * when it upgrades): installations rely on a minor version removing nothing.
  *
- * yanked.yaml may yank a version, or list it again, of a vendor the author owns.
+ * yanked.yaml may yank a version, or list it again, of a vendor the author owns; or remove a
+ * template (`vendor/name: all`), which then takes no new version until it is listed again.
  *
  * Anything else (vendors.yaml, catalog.pub, the tools) is left to the maintainers' review.
  */
@@ -89,7 +90,7 @@ final readonly class PullRequestCheck
                     $listed[] = $publishedVersion;
                 }
             }
-            $problems = [...$problems, ...$this->checkVersion($root, $directory, $vendor, $name, $version, $listed, $base->vendors, $author)];
+            $problems = [...$problems, ...$this->checkVersion($root, $directory, $vendor, $name, $version, $listed, $base->vendors, $author, $base->yanked->isRemoved($vendor.'/'.$name))];
         }
 
         return $problems;
@@ -100,7 +101,7 @@ final readonly class PullRequestCheck
      *
      * @return list<string>
      */
-    private function checkVersion(string $root, string $directory, string $vendor, string $name, string $version, array $listed, Vendors $vendors, ?string $author): array
+    private function checkVersion(string $root, string $directory, string $vendor, string $name, string $version, array $listed, Vendors $vendors, ?string $author, bool $removed = false): array
     {
         $template = $vendor.'/'.$name;
         if (1 !== preg_match(Format::NAME_PATTERN, $template)) {
@@ -111,6 +112,9 @@ final readonly class PullRequestCheck
         }
 
         $problems = [];
+        if ($removed) {
+            $problems[] = \sprintf('%s: %s is removed (yanked.yaml: all): list it again before publishing a new version.', $directory, $template);
+        }
         if (!$vendors->has($vendor)) {
             $problems[] = \sprintf('%s: The vendor "%s" is not registered: add it to vendors.yaml in a pull request of its own first.', $directory, $vendor);
         } elseif (null !== $author && !$vendors->isOwner($vendor, $author)) {
@@ -223,6 +227,14 @@ final readonly class PullRequestCheck
         $problems = [];
         foreach ($yanked->differences($base->yanked) as [$name, $version]) {
             $vendor = explode('/', $name)[0];
+            if (Yanked::ALL === $version) {
+                if ([] === array_filter($base->published, static fn (string $directory): bool => str_starts_with($directory, self::TEMPLATES.'/'.$name.'/'))) {
+                    $problems[] = \sprintf('%s: %s is not published.', self::YANKED, $name);
+                } elseif (null !== $author && !$base->vendors->isOwner($vendor, $author)) {
+                    $problems[] = \sprintf('%s: %s is not an owner of the vendor "%s": only its owners remove its templates.', self::YANKED, $author, $vendor);
+                }
+                continue;
+            }
             if (!\in_array(self::TEMPLATES.'/'.$name.'/'.$version, $base->published, true)) {
                 $problems[] = \sprintf('%s: %s %s is not published.', self::YANKED, $name, $version);
             } elseif (null !== $author && !$base->vendors->isOwner($vendor, $author)) {

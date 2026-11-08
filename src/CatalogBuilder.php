@@ -98,7 +98,7 @@ final readonly class CatalogBuilder
                 throw new BuildFailed([\sprintf('%s/%s: The file cannot be written.', $output, $file)]);
             }
         }
-        $this->site->build($packages, $entries, $output, $siteUrl, $publicKey);
+        $this->site->build($packages, $entries, $output, $siteUrl, $publicKey, $yanked->removed());
 
         return $entries;
     }
@@ -166,6 +166,11 @@ final readonly class CatalogBuilder
         foreach ($yanked->all() as [$name, $version]) {
             if (!isset($packages[PullRequestCheck::TEMPLATES.'/'.$name.'/'.$version])) {
                 $problems[] = \sprintf('%s: %s %s is not published.', PullRequestCheck::YANKED, $name, $version);
+            }
+        }
+        foreach ($yanked->removed() as $name) {
+            if ([] === array_filter(array_keys($packages), static fn (string $directory): bool => str_starts_with($directory, PullRequestCheck::TEMPLATES.'/'.$name.'/'))) {
+                $problems[] = \sprintf('%s: %s is not published.', PullRequestCheck::YANKED, $name);
             }
         }
         if ([] !== $problems) {

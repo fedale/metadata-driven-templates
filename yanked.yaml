@@ -2,3 +2,8 @@
 # version. A version is yanked by a pull request from an owner of its vendor.
 #
 # acme/shop: ["1.0.1"]
+#
+# "all" removes a template: every version yanked, the catalog no longer lists it, and it takes
+# no new version until it is listed again (by its vendor's owners, or the maintainers).
+#
+# acme/old-shop: all

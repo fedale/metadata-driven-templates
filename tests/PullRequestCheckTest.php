@@ -156,6 +156,32 @@ final class PullRequestCheckTest extends TestCase
         self::assertSame([], $this->check($this->added($major)));
     }
 
+    public function testAnOwnerRemovesATemplate(): void
+    {
+        $this->published[] = $this->addVersion('1.0.0');
+        file_put_contents($this->root.'/yanked.yaml', "acme/shop: all\n");
+
+        self::assertSame([], $this->check([new ChangedFile('M', 'yanked.yaml')]));
+        self::assertSame(
+            ['yanked.yaml: anna is not an owner of the vendor "acme": only its owners remove its templates.'],
+            $this->check([new ChangedFile('M', 'yanked.yaml')], author: 'anna'),
+        );
+
+        file_put_contents($this->root.'/yanked.yaml', "acme/other: all\n");
+        self::assertSame(['yanked.yaml: acme/other is not published.'], $this->check([new ChangedFile('M', 'yanked.yaml')]));
+    }
+
+    public function testARemovedTemplateTakesNoNewVersion(): void
+    {
+        $this->published[] = $this->addVersion('1.0.0');
+        $this->yanked = "acme/shop: all\n";
+
+        self::assertSame(
+            ['templates/acme/shop/1.1.0: acme/shop is removed (yanked.yaml: all): list it again before publishing a new version.'],
+            $this->check($this->added($this->addVersion('1.1.0'))),
+        );
+    }
+
     public function testTheManifestMustMatchItsDirectory(): void
     {
         $this->published[] = $this->addVersion('1.0.0');
@@ -272,7 +298,7 @@ final class PullRequestCheckTest extends TestCase
 
         file_put_contents($this->root.'/yanked.yaml', "acme/shop: 1.0.0\n");
         self::assertSame(
-            ['yanked.yaml: "acme/shop" is not a template name followed by a list of versions.'],
+            ['yanked.yaml: "acme/shop" is not a template name followed by a list of versions, or by "all".'],
             $this->check([new ChangedFile('M', 'yanked.yaml')]),
         );
     }
