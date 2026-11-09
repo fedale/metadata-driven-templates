@@ -31,16 +31,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # Only for a base whose composer.json still loads the format from ../template-format
-      # (before 2026-11-08); the format comes from Packagist since. Drop it once no open pull
-      # request is based on such a commit.
-      - name: The template format, for an older base
-        uses: actions/checkout@v4
-        with:
-          repository: fedale/metadata-driven-template-format
-          path: template-format
-          persist-credentials: false
-
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'

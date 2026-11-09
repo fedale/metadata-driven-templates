@@ -3,8 +3,7 @@
 The brief is in metadata-driven's `docs/internal/template-plan.md`, section "The catalog". This
 file is the catalog's own plan: its phases and what was built.
 
-Status: **C1, C2 and C3 done**; C4 in steps (metadata-driven's `template-plan.md`, C4): the
-semver check on `feature/semver-check`, awaiting review.
+Status: **C1, C2, C3 and C4 done** (2026-11-08), all merged into `main`.
 
 ## Decisions
 
@@ -41,8 +40,7 @@ semver check on `feature/semver-check`, awaiting review.
    - `.github/workflows/check.yml`: `pull_request` (read-only token, no secrets), the tools
      from the **base** commit, the templates from the head: a pull request cannot change the
      checks it is checked by. A second job runs the tools' own `composer qa`. The format comes
-     from `fedale/metadata-driven-template-format`, checked out beside the tools for the path
-     repository.
+     from Packagist (see C2).
    - The semver bump against the changes: see C4.
 2. **C2 — publication on merge** — done. As built:
    - `bin/catalog build --output= [--repository=] [--unsigned]` (`BuildCommand`,
@@ -62,8 +60,8 @@ semver check on `feature/semver-check`, awaiting review.
      base: vendors, published versions, yanked versions).
    - Index address: `https://fedale.github.io/metadata-driven-templates/index.json`.
    - The format library comes from Packagist (`^1.1`) since 2026-11-08, locked by
-     `composer.lock`; the check job still checks it out beside the tools, for a base older
-     than that (drop it once no open pull request has such a base).
+     `composer.lock`. The check job's extra checkout of it, kept for pull requests based on an
+     older commit, was dropped on 2026-11-09, once none was open.
 3. **C3 — the static site** — done (2026-11-08). As built:
    - `SiteBuilder` (`src/Site/`), called by `CatalogBuilder::build()` once the index and the
      archives are written, from the same checked packages: `index.html` (every template, a
