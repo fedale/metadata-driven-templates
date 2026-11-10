@@ -1,0 +1,55 @@
+format: metadata-driven/v1
+kind: Object
+id: fedale.phone
+spec:
+  name: phone
+  label: Phone
+  plural: Phones
+  fields:
+    -
+      id: fedale.phone.profile
+      name: profile
+      type: relation
+      label: Profile
+      required: true
+      settings:
+        target: fedale.profile
+        onDelete: cascade
+        inverseName: phones
+    -
+      id: fedale.phone.prefix
+      name: prefix
+      type: select
+      label: Prefix
+      settings:
+        default: '+39'
+        options:
+          -
+            label: '+39 IT'
+            value: '+39'
+          -
+            label: '+41 CH'
+            value: '+41'
+    -
+      id: fedale.phone.number
+      name: number
+      type: tel
+      label: Number
+      required: true
+    -
+      id: fedale.phone.type
+      name: type
+      type: select
+      label: Type
+      settings:
+        default: mobile
+        options:
+          -
+            label: Mobile
+            value: mobile
+          -
+            label: Home
+            value: home
+          -
+            label: Office
+            value: office

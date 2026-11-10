@@ -1,0 +1,50 @@
+format: metadata-driven/v1
+kind: Object
+id: fedale.account
+spec:
+  name: account
+  label: Account
+  plural: Accounts
+  fields:
+    -
+      id: fedale.account.username
+      name: username
+      type: text
+      label: Username
+      required: true
+      unique: true
+    -
+      id: fedale.account.email
+      name: email
+      type: email
+      label: Email
+      required: true
+      unique: true
+    -
+      id: fedale.account.firstname
+      name: firstname
+      type: text
+      label: 'First name'
+      required: true
+    -
+      id: fedale.account.lastname
+      name: lastname
+      type: text
+      label: 'Last name'
+      required: true
+    -
+      id: fedale.account.password
+      name: password
+      type: password
+      label: Password
+      required: true
+      settings:
+        confirm: true
+    -
+      id: fedale.account.active
+      name: active
+      type: boolean
+      label: Active
+      settings:
+        default: true
+        display: switch

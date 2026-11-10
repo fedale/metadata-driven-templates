@@ -1,0 +1,32 @@
+format: metadata-driven/v1
+kind: Object
+id: fedale.qualification
+spec:
+  name: qualification
+  label: Qualification
+  plural: Qualifications
+  fields:
+    -
+      id: fedale.qualification.account
+      name: account
+      type: relation
+      label: Account
+      required: true
+      settings:
+        target: fedale.account
+        onDelete: cascade
+        inverseName: qualifications
+    -
+      id: fedale.qualification.title
+      name: title
+      type: text
+      label: Title
+      required: true
+    -
+      id: fedale.qualification.year
+      name: year
+      type: number
+      label: Year
+      settings:
+        max: 2100
+        min: 1950

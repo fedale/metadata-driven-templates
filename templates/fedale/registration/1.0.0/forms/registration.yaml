@@ -1,0 +1,44 @@
+format: metadata-driven/v1
+kind: Form
+id: fedale.registration
+spec:
+  name: registration
+  definition:
+    label: 'User registration'
+    object: fedale.account
+    fields:
+      - username
+      - email
+      - firstname
+      - lastname
+      - password
+      - active
+    service_fields:
+      -
+        name: terms
+        type: boolean
+        label: 'I accept the terms'
+        required: true
+    sections:
+      -
+        name: profile
+        label: Profile
+        object: fedale.profile
+        via: fedale.profile.account
+        required:
+          - municipality
+        sections:
+          -
+            name: phones
+            label: Phones
+            object: fedale.phone
+            via: fedale.phone.profile
+            mode: many
+            min: 1
+            inline: true
+      -
+        name: qualifications
+        label: Qualifications
+        object: fedale.qualification
+        via: fedale.qualification.account
+        mode: many

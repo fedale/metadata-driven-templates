@@ -1,0 +1,15 @@
+format: metadata-driven/v1
+kind: Template
+id: fedale/registration
+spec:
+  version: 1.0.0
+  label: Registration
+  description: 'User accounts with their profile, phones and qualifications, and the form to sign up, on top of the Italian regions, provinces and municipalities of fedale/geo-italy.'
+  license: MIT
+  requires:
+    format: metadata-driven/v1
+    fedale/geo-italy: ^1.0
+  resources:
+    - 'objects/*.yaml'
+    - 'forms/*.yaml'
+    - 'translations/*.yaml'
