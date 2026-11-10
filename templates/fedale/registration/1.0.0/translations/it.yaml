@@ -1,0 +1,46 @@
+format: metadata-driven/v1
+kind: Translations
+id: fedale.translations.it
+spec:
+  locale: it
+  entries:
+    field.account.active: Attivo
+    field.account.email: Email
+    field.account.firstname: Nome
+    field.account.lastname: Cognome
+    field.account.password: Password
+    field.account.username: 'Nome utente'
+    field.phone.number: Numero
+    field.phone.prefix: Prefisso
+    field.phone.profile: Profilo
+    field.phone.type: Tipo
+    field.profile.account: Account
+    field.profile.birthdate: 'Data di nascita'
+    field.profile.gender: Genere
+    field.profile.municipality: Comune
+    field.profile.province: Provincia
+    field.profile.region: Regione
+    field.profile.zipcode: CAP
+    field.qualification.account: Account
+    field.qualification.title: Titolo
+    field.qualification.year: Anno
+    form.registration: 'Registrazione utente'
+    object.account.plural: Account
+    object.account.singular: Account
+    object.phone.plural: Telefoni
+    object.phone.singular: Telefono
+    object.profile.plural: Profili
+    object.profile.singular: Profilo
+    object.qualification.plural: 'Titoli di studio'
+    object.qualification.singular: 'Titolo di studio'
+    option.phone.type.home: Casa
+    option.phone.type.mobile: Cellulare
+    option.phone.type.office: Ufficio
+    option.profile.gender.f: Femmina
+    option.profile.gender.m: Maschio
+    option.profile.gender.n: 'Preferisco non dirlo'
+    option.profile.gender.x: 'Non binario'
+    section.registration.profile: Profilo
+    section.registration.profile.phones: Telefoni
+    section.registration.qualifications: 'Titoli di studio'
+    service.registration.terms: 'Accetto i termini'

@@ -1,0 +1,76 @@
+format: metadata-driven/v1
+kind: Object
+id: fedale.profile
+spec:
+  name: profile
+  label: Profile
+  plural: Profiles
+  fields:
+    -
+      id: fedale.profile.account
+      name: account
+      type: relation
+      label: Account
+      unique: true
+      settings:
+        target: fedale.account
+        onDelete: cascade
+        inverseName: profile
+    -
+      id: fedale.profile.gender
+      name: gender
+      type: select
+      label: Gender
+      settings:
+        display: radio
+        options:
+          -
+            label: Male
+            value: m
+          -
+            label: Female
+            value: f
+          -
+            label: Non-binary
+            value: x
+          -
+            label: 'Rather not say'
+            value: 'n'
+    -
+      id: fedale.profile.birthdate
+      name: birthdate
+      type: date
+      label: 'Birth date'
+    -
+      id: fedale.profile.region
+      name: region
+      type: relation
+      label: Region
+      settings:
+        target: fedale.region
+    -
+      id: fedale.profile.province
+      name: province
+      type: relation
+      label: Province
+      settings:
+        target: fedale.province
+        dependsOn: fedale.profile.region
+        dependsVia: fedale.province.region
+    -
+      id: fedale.profile.municipality
+      name: municipality
+      type: relation
+      label: Municipality
+      settings:
+        target: fedale.municipality
+        dependsOn: fedale.profile.province
+        dependsVia: fedale.municipality.province
+    -
+      id: fedale.profile.zipcode
+      name: zipcode
+      type: text
+      label: 'Postal code'
+      settings:
+        pattern: '\d{5}'
+        maxLength: 5
