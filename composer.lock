@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "ed5fda3528669fb5724598ce003d5f8f",
+    "content-hash": "5995eeafd6c533386a914c4818f490ce",
     "packages": [
         {
             "name": "dflydev/dot-access-data",
@@ -82,17 +82,17 @@
             "time": "2024-07-08T12:26:09+00:00"
         },
         {
-            "name": "fedale/template-format",
-            "version": "v1.1.0",
+            "name": "fedale/metadata-driven-template-format",
+            "version": "v1.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/fedale/metadata-driven-template-format.git",
-                "reference": "5c3c185822ccb70241fc0c09a6b35d72f6df53b5"
+                "reference": "004bd9223fcb33fa2ee7346212196c3e7d7e29e9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/fedale/metadata-driven-template-format/zipball/5c3c185822ccb70241fc0c09a6b35d72f6df53b5",
-                "reference": "5c3c185822ccb70241fc0c09a6b35d72f6df53b5",
+                "url": "https://api.github.com/repos/fedale/metadata-driven-template-format/zipball/004bd9223fcb33fa2ee7346212196c3e7d7e29e9",
+                "reference": "004bd9223fcb33fa2ee7346212196c3e7d7e29e9",
                 "shasum": ""
             },
             "require": {
@@ -131,9 +131,9 @@
             ],
             "support": {
                 "issues": "https://github.com/fedale/metadata-driven-template-format/issues",
-                "source": "https://github.com/fedale/metadata-driven-template-format/tree/v1.1.0"
+                "source": "https://github.com/fedale/metadata-driven-template-format/tree/v1.1.1"
             },
-            "time": "2026-11-08T18:07:41+00:00"
+            "time": "2026-11-10T09:30:27+00:00"
         },
         {
             "name": "league/commonmark",
