@@ -54,7 +54,23 @@ final readonly class SiteBuilder
             $byName[$package->name()][] = [$package, $entries[$i]];
         }
         ksort($byName);
-        $pages = array_map(fn (array $versions): TemplatePage => TemplatePage::of($versions, $this->records, \in_array($versions[0][0]->name(), $removed, true), $vendors?->isVerified(explode('/', $versions[0][0]->name())[0]) ?? false), array_values($byName));
+        // What requires each template: the current versions of those listed, as an install takes them.
+        $requiredBy = [];
+        foreach ($byName as $name => $versions) {
+            if (\in_array($name, $removed, true)) {
+                continue;
+            }
+            foreach (array_keys(TemplatePage::requirementsOf(TemplatePage::current($versions)[1])) as $required) {
+                $requiredBy[$required][] = $name;
+            }
+        }
+        $pages = array_map(fn (array $versions): TemplatePage => TemplatePage::of(
+            $versions,
+            $this->records,
+            \in_array($versions[0][0]->name(), $removed, true),
+            $vendors?->isVerified(explode('/', $versions[0][0]->name())[0]) ?? false,
+            $requiredBy[$versions[0][0]->name()] ?? [],
+        ), array_values($byName));
         $listed = array_values(array_filter($pages, static fn (TemplatePage $page): bool => !$page->removed));
 
         foreach ($pages as $page) {
@@ -62,6 +78,8 @@ final readonly class SiteBuilder
                 'root' => '../../../',
                 'page' => $page,
                 'title' => $page->label,
+                // The templates with a page: a requirement links to its own.
+                'names' => array_keys($byName),
             ]));
         }
         $this->write($output.'/index.html', $this->render('home.html.twig', [

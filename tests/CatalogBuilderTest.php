@@ -134,6 +134,34 @@ final class CatalogBuilderTest extends TestCase
         $this->assertFails([$this->root.'/site: The site is built into a new or empty directory.'], $this->keys['secret']);
     }
 
+    public function testBuildsTemplatesRequiringTemplates(): void
+    {
+        $this->addFixture('places', '1.2.0');
+        $this->addFixture('people', '1.0.0');
+
+        $this->builder()->build($this->root, $this->root.'/site', $this->keys['secret']);
+
+        $index = TemplateIndex::fromJson((string) file_get_contents($this->root.'/site/index.json'), self::ADDRESS);
+        self::assertSame(['format' => 'metadata-driven/v1', 'acme/places' => '^1.0'], $index->find('acme/people', '1.0.0')?->requires);
+
+        // A requirement yanked since stays one: what was published keeps building.
+        file_put_contents($this->root.'/yanked.yaml', "acme/places: all\n");
+        $this->builder()->build($this->root, $this->root.'/site-2', $this->keys['secret']);
+    }
+
+    public function testFailsOnARequirementTheCatalogDoesNotHave(): void
+    {
+        $this->addFixture('people', '1.0.0');
+
+        try {
+            $this->builder()->build($this->root, $this->root.'/site', $this->keys['secret']);
+            self::fail('The build must fail.');
+        } catch (BuildFailed $e) {
+            // First, the cause of the references to its items failing after it.
+            self::assertSame('templates/acme/people/1.0.0/template.yaml: spec.requires.acme/places: The catalog publishes no version of acme/places that fits ^1.0 and is not yanked: publish it first, in a pull request of its own.', $e->problems[0] ?? null);
+        }
+    }
+
     /**
      * @param list<string> $problems
      */

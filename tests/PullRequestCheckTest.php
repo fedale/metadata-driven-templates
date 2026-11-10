@@ -356,6 +356,52 @@ final class PullRequestCheckTest extends TestCase
         );
     }
 
+    public function testChecksAVersionAgainstTheTemplatesItRequires(): void
+    {
+        $this->published[] = $this->addFixture('places', '1.2.0');
+
+        // Its relations and its cascade name the region and the province of acme/places.
+        self::assertSame([], $this->check($this->added($this->addFixture('people', '1.0.0'))));
+    }
+
+    public function testTakesTheHighestPublishedVersionTheConstraintAllows(): void
+    {
+        $this->published[] = $this->addFixture('places', '1.2.0');
+        // 2.0.0 drops the province's region, which acme/people's cascade names: ^1.0 leaves it out.
+        $this->published[] = $places = $this->addFixture('places', '2.0.0');
+        $province = $this->root.'/'.$places.'/objects/province.yaml';
+        file_put_contents($province, (string) preg_replace('/    - id: acme\.province\.region\n(      .*\n)+/', '', (string) file_get_contents($province)));
+
+        self::assertSame([], $this->check($this->added($this->addFixture('people', '1.0.0'))));
+        self::assertNotSame([], $this->check($this->added($this->addFixture('people', '1.1.0', ['acme/places' => '^2.0']))));
+    }
+
+    public function testRefusesARequirementTheCatalogDoesNotPublish(): void
+    {
+        $problem = 'templates/acme/people/1.0.0/template.yaml: spec.requires.acme/places: The catalog publishes no version of acme/places that fits ^1.0 and is not yanked: publish it first, in a pull request of its own.';
+        $people = $this->added($this->addFixture('people', '1.0.0'));
+
+        // Nor in the same pull request: it is not published yet.
+        self::assertContains($problem, $this->check([...$people, ...$this->added($this->addFixture('places', '1.2.0'))]));
+        // Not said twice, the checker's way.
+        self::assertSame([], array_values(array_filter($this->check($people), static fn (string $given): bool => str_contains($given, 'must be installed'))));
+
+        $this->published[] = 'templates/acme/places/1.2.0';
+        $this->yanked = "acme/places: [1.2.0]\n";
+        self::assertContains($problem, $this->check($people));
+    }
+
+    public function testRefusesTemplatesRequiringEachOther(): void
+    {
+        $this->published[] = $this->addFixture('places', '1.2.0');
+        $this->published[] = $this->addFixture('people', '1.0.0');
+
+        self::assertContains(
+            'templates/acme/places/1.3.0/template.yaml: spec.requires: These templates would require each other: acme/places requires acme/people requires acme/places. None of them could be installed.',
+            $this->check($this->added($this->addFixture('places', '1.3.0', ['acme/people' => '^1.0']))),
+        );
+    }
+
     /**
      * @param list<ChangedFile> $changes
      *

@@ -63,6 +63,20 @@ final class SiteBuilderTest extends TestCase
         self::assertStringContainsString('href="../../../archives/acme/shop-1.0.0.tar.gz"', $page);
     }
 
+    public function testAPageLinksTheTemplatesItRequiresAndThoseRequiringIt(): void
+    {
+        $this->addFixture('places', '1.2.0');
+        $this->addFixture('people', '1.0.0');
+        $site = $this->build(['templates/acme/places/index.html', 'templates/acme/people/index.html']);
+
+        $people = $site['templates/acme/people/index.html'];
+        self::assertStringContainsString('Requires <a href="../../../templates/acme/places/">acme/places</a> <code>^1.0</code>: an install brings what is missing along.', $people);
+        // In the list of versions too, the format left as it is.
+        self::assertStringContainsString('<code>format metadata-driven/v1</code><br><a href="../../../templates/acme/places/">acme/places</a> <code>^1.0</code>', $people);
+        self::assertStringContainsString('Required by <a href="../../../templates/acme/people/">acme/people</a>.', $site['templates/acme/places/index.html']);
+        self::assertStringNotContainsString('Required by', $people);
+    }
+
     public function testTheHomePageListsTheTemplatesAndHowToUseTheCatalog(): void
     {
         $site = $this->build();
@@ -146,9 +160,11 @@ final class SiteBuilderTest extends TestCase
     }
 
     /**
+     * @param list<string> $pages other pages to read, by path in the site
+     *
      * @return array<string, string> the pages and search.json, by path in the site
      */
-    private function build(): array
+    private function build(array $pages = []): array
     {
         $output = $this->root.'/site-'.bin2hex(random_bytes(4));
         (new CatalogBuilder(
@@ -159,7 +175,7 @@ final class SiteBuilderTest extends TestCase
         ))->build($this->root, $output, $this->keys['secret']);
 
         $site = [];
-        foreach (['index.html', 'search.json', 'templates/acme/shop/index.html'] as $file) {
+        foreach (['index.html', 'search.json', 'templates/acme/shop/index.html', ...$pages] as $file) {
             self::assertFileExists($output.'/'.$file);
             $site[$file] = (string) file_get_contents($output.'/'.$file);
         }

@@ -3,7 +3,9 @@
 The brief is in metadata-driven's `docs/internal/template-plan.md`, section "The catalog". This
 file is the catalog's own plan: its phases and what was built.
 
-Status: **C1, C2, C3 and C4 done** (2026-11-08), all merged into `main`.
+Status: **C1, C2, C3 and C4 done** (2026-11-08), all merged into `main`. **Templates requiring
+templates** (metadata-driven's phase 8, step 6) on branch `feature/requires-check`
+(2026-11-10).
 
 ## Decisions
 
@@ -112,6 +114,22 @@ Status: **C1, C2, C3 and C4 done** (2026-11-08), all merged into `main`.
    - **metadata-driven's phase 7** — done (2026-11-08): `metadata:template:publish` checks a
      version against a checkout of this repository as `PullRequestCheck` would (ownership
      aside), copies it to its version directory and prints the git commands. C4 is complete.
+
+5. **Templates requiring templates** (metadata-driven's phase 8, step 6, 2026-11-10, branch
+   `feature/requires-check`). As built: the format at `^1.2` (`Constraint`,
+   `PackageChecker::check($package, $required)`). `Requirements` picks, for each requirement,
+   the highest version its constraint allows and not yanked (a removed template's versions all
+   count as yanked), the one an installation takes, and checks the version against those
+   (`check()`); a requirement it doesn't publish is one problem, placed first, the checker's
+   "it must be installed" left out. The pull request check reads the published versions of
+   the base from the checkout (a pull request cannot change them), the base's yanked list, and
+   refuses a cycle (`cycle()`, following the requirements' own, as published). The build checks
+   every version the same way once all are read, but takes a yanked version when no other
+   fits: a yank must not stop the publication of what was accepted. The site: a page says what
+   its current version requires, linked to their pages, and which listed templates' current
+   versions require it ("Required by"); the versions table links them too. Tests: the fixtures
+   `acme/places` and `acme/people` (copied from metadata-driven), `TemporaryCatalog::
+   addFixture()`.
 
 ## Not in scope
 

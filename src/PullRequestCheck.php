@@ -25,7 +25,9 @@ use Fedale\TemplateFormat\Versions\VersionCheck;
  * library's checks), match its path, be higher than the versions already listed, stay under the
  * size limit, and belong to a vendor the author owns. Its number must fit what it changed
  * against the highest version already listed (VersionCheck, the rules metadata-driven applies
- * when it upgrades): installations rely on a minor version removing nothing.
+ * when it upgrades): installations rely on a minor version removing nothing. The templates it
+ * requires must be published, in a version fitting each constraint and not yanked, and it is
+ * checked against those versions (Requirements); it may not close a cycle of requirements.
  *
  * yanked.yaml may yank a version, or list it again, of a vendor the author owns; or remove a
  * template (`vendor/name: all`), which then takes no new version until it is listed again.
@@ -104,7 +106,7 @@ final readonly class PullRequestCheck
                     $listed[] = $publishedVersion;
                 }
             }
-            $problems = [...$problems, ...$this->checkVersion($root, $directory, $vendor, $name, $version, $listed, $base->vendors, $author, $base->yanked->isRemoved($vendor.'/'.$name))];
+            $problems = [...$problems, ...$this->checkVersion($root, $directory, $vendor, $name, $version, $listed, $base, $author)];
         }
 
         return $problems;
@@ -115,9 +117,11 @@ final readonly class PullRequestCheck
      *
      * @return list<string>
      */
-    private function checkVersion(string $root, string $directory, string $vendor, string $name, string $version, array $listed, Vendors $vendors, ?string $author, bool $removed = false): array
+    private function checkVersion(string $root, string $directory, string $vendor, string $name, string $version, array $listed, BaseBranch $base, ?string $author): array
     {
         $template = $vendor.'/'.$name;
+        $vendors = $base->vendors;
+        $removed = $base->yanked->isRemoved($template);
         if (1 !== preg_match(Format::NAME_PATTERN, $template)) {
             return [\sprintf('%s: "%s" is not a template name (vendor/name, lowercase letters, digits and hyphens).', $directory, $template)];
         }
@@ -161,12 +165,43 @@ final readonly class PullRequestCheck
             $problems[] = \sprintf('%s: The manifest says %s %s: the directory must be templates/%s/%s/.', $directory, $package->name(), $package->version(), $package->name(), $package->version());
         }
 
-        $structure = self::located($directory, $this->checker->check($package));
+        $requirements = $this->requirements($root, $base);
+        $structure = self::located($directory, $requirements->check($this->checker, $package));
+        $cycle = $requirements->cycle($package);
+        if (null !== $cycle) {
+            $structure[] = \sprintf('%s/%s: spec.requires: These templates would require each other: %s. None of them could be installed.', $directory, Format::MANIFEST, $cycle);
+        }
         if ([] !== $structure || [] !== $newer) {
             return [...$problems, ...$structure];
         }
 
         return [...$problems, ...$this->checkNumber($root, $package, $directory, $listed)];
+    }
+
+    /**
+     * The published versions, read from the checkout: a pull request cannot change them (checked
+     * first), and the base's yanked versions, a pull request yanking one not counting yet.
+     */
+    private function requirements(string $root, BaseBranch $base): Requirements
+    {
+        $versions = [];
+        foreach ($base->published as $directory) {
+            [, $vendor, $name, $version] = explode('/', $directory) + ['', '', '', ''];
+            $versions[$vendor.'/'.$name][] = $version;
+        }
+
+        return new Requirements($versions, $base->yanked, function (string $name, string $version) use ($root): ?Package {
+            $directory = self::TEMPLATES.'/'.$name.'/'.$version;
+            // As for the version checked: nothing read through a link.
+            if ([] !== Links::in($root, $directory)) {
+                return null;
+            }
+            try {
+                return $this->reader->read($root.'/'.$directory);
+            } catch (InvalidPackage) {
+                return null;
+            }
+        });
     }
 
     /**
