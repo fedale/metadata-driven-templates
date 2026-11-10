@@ -26,11 +26,13 @@ final readonly class TemplatePage
     public const int MAX_README_BYTES = 100_000;
 
     /**
-     * @param list<array{version: string, yanked: bool, url: string, sha256: string, requires: array<string, string>}>                                                                $versions newest first
+     * @param list<array{version: string, yanked: bool, url: string, sha256: string, requires: array<string, string>}>                                                                $versions   newest first
      * @param list<array{name: string, label: string, plural: string, fields: list<array{name: string, label: string, type: string, required: bool, unique: bool, target: ?string}>}> $objects
      * @param list<array{name: string, label: string}>                                                                                                                                $forms
      * @param list<array{object: string, records: int, managed: bool}>                                                                                                                $seeds
-     * @param list<string>                                                                                                                                                            $locales  the languages its translations add
+     * @param list<string>                                                                                                                                                            $locales    the languages its translations add
+     * @param array<string, string>                                                                                                                                                   $requires   the templates its current version requires: name => constraint
+     * @param list<string>                                                                                                                                                            $requiredBy the templates listed whose current version requires it
      */
     public function __construct(
         public string $name,
@@ -47,23 +49,49 @@ final readonly class TemplatePage
         public ?string $readme,
         public bool $removed = false,
         public bool $verified = false,
+        public array $requires = [],
+        public array $requiredBy = [],
     ) {
     }
 
     /**
-     * @param list<array{Package, IndexEntry}> $versions every version of one template, any order
+     * The version a page shows, and an install without a version takes: the newest not yanked,
+     * the newest of all when every one is.
+     *
+     * @param non-empty-list<array{Package, IndexEntry}> $versions every version of one template, any order
+     *
+     * @return array{Package, IndexEntry}
      */
-    public static function of(array $versions, SeedRecords $records, bool $removed = false, bool $verified = false): self
+    public static function current(array $versions): array
     {
         usort($versions, static fn (array $a, array $b): int => version_compare($b[0]->version(), $a[0]->version()));
-        $current = $versions[0];
         foreach ($versions as $version) {
             if (!$version[1]->yanked) {
-                $current = $version;
-                break;
+                return $version;
             }
         }
-        [$package, $entry] = $current;
+
+        return $versions[0];
+    }
+
+    /**
+     * The templates a version requires: name => constraint, the format left out.
+     *
+     * @return array<string, string>
+     */
+    public static function requirementsOf(IndexEntry $entry): array
+    {
+        return array_diff_key($entry->requires, ['format' => true]);
+    }
+
+    /**
+     * @param non-empty-list<array{Package, IndexEntry}> $versions   every version of one template, any order
+     * @param list<string>                               $requiredBy the templates listed whose current version requires it
+     */
+    public static function of(array $versions, SeedRecords $records, bool $removed = false, bool $verified = false, array $requiredBy = []): self
+    {
+        usort($versions, static fn (array $a, array $b): int => version_compare($b[0]->version(), $a[0]->version()));
+        [$package, $entry] = self::current($versions);
         $spec = $package->manifest->spec;
 
         $objects = [];
@@ -118,6 +146,8 @@ final readonly class TemplatePage
             self::readme($package),
             $removed,
             $verified,
+            self::requirementsOf($entry),
+            $requiredBy,
         );
     }
 

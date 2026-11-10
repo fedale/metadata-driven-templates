@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Fedale\TemplateCatalog\Tests\Support;
 
 /**
- * A catalog checkout in a temporary directory, with versions of the example template (acme/shop)
- * copied into it.
+ * A catalog checkout in a temporary directory, with versions of the example templates copied
+ * into it: acme/shop, and acme/places and acme/people (requiring acme/places ^1.0).
  */
 trait TemporaryCatalog
 {
     private const string EXAMPLE = __DIR__.'/../Fixtures/shop';
+    private const string FIXTURES = __DIR__.'/../Fixtures';
 
     private string $root;
 
@@ -31,6 +32,27 @@ trait TemporaryCatalog
         $manifest = $this->root.'/'.$directory.'/template.yaml';
         $yaml = (string) file_get_contents($manifest);
         file_put_contents($manifest, str_replace(['id: acme/shop', 'version: 1.0.0'], ['id: '.$name, 'version: '.($manifestVersion ?? $version)], $yaml));
+
+        return $directory;
+    }
+
+    /**
+     * Copies acme/places or acme/people as templates/acme/<fixture>/<version>/, requiring other
+     * templates when given (replacing those of the fixture).
+     *
+     * @param array<string, string>|null $requires name => constraint
+     */
+    private function addFixture(string $fixture, string $version, ?array $requires = null): string
+    {
+        $directory = 'templates/acme/'.$fixture.'/'.$version;
+        self::copy(self::FIXTURES.'/'.$fixture, $this->root.'/'.$directory);
+        $manifest = $this->root.'/'.$directory.'/template.yaml';
+        $yaml = (string) preg_replace('/^  version: .*$/m', '  version: '.$version, (string) file_get_contents($manifest));
+        if (null !== $requires) {
+            $lines = array_map(static fn (string $name, string $constraint): string => \sprintf('    %s: %s', $name, $constraint), array_keys($requires), $requires);
+            $yaml = (string) preg_replace('/^  requires:\n(    .*\n)+/m', "  requires:\n    format: metadata-driven/v1\n".implode('', array_map(static fn (string $line): string => $line."\n", $lines)), $yaml);
+        }
+        file_put_contents($manifest, $yaml);
 
         return $directory;
     }

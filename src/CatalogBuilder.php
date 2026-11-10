@@ -54,6 +54,7 @@ final readonly class CatalogBuilder
     {
         $packages = $this->versions($root);
         $yanked = $this->yanked($root, $packages);
+        $this->checkRequirements($packages, $yanked);
         $publicKey = null === $secretKey ? null : $this->publicKey($root);
         if (file_exists($output) && (!is_dir($output) || [] !== array_diff(scandir($output) ?: [], ['.', '..']))) {
             throw new BuildFailed([\sprintf('%s: The site is built into a new or empty directory.', $output)]);
@@ -104,7 +105,8 @@ final readonly class CatalogBuilder
     }
 
     /**
-     * Every version directory, read and checked.
+     * Every version directory, read and matched against its path; the format's checks follow,
+     * once every version is known (checkRequirements()).
      *
      * @return array<string, Package> by directory, sorted
      *
@@ -138,7 +140,6 @@ final readonly class CatalogBuilder
                 $problems[] = \sprintf('%s: The manifest says %s %s.', $directory, $package->name(), $package->version());
                 continue;
             }
-            $problems = [...$problems, ...PullRequestCheck::located($directory, $this->checker->check($package))];
             $packages[$directory] = $package;
         }
         if ([] !== $problems) {
@@ -146,6 +147,36 @@ final readonly class CatalogBuilder
         }
 
         return $packages;
+    }
+
+    /**
+     * Every version checked by the format's checker against the templates it requires, as the
+     * catalog has them (Requirements): the highest fitting version not yanked, a yanked one
+     * when there is no other (a version listed once stays valid when its requirement is yanked).
+     *
+     * @param array<string, Package> $packages by directory
+     *
+     * @throws BuildFailed a version is invalid
+     */
+    private function checkRequirements(array $packages, Yanked $yanked): void
+    {
+        $versions = [];
+        foreach ($packages as $package) {
+            $versions[$package->name()][] = $package->version();
+        }
+        $requirements = new Requirements(
+            $versions,
+            $yanked,
+            static fn (string $name, string $version): ?Package => $packages[PullRequestCheck::TEMPLATES.'/'.$name.'/'.$version] ?? null,
+            yankedIfNothingElse: true,
+        );
+        $problems = [];
+        foreach ($packages as $directory => $package) {
+            $problems = [...$problems, ...PullRequestCheck::located($directory, $requirements->check($this->checker, $package))];
+        }
+        if ([] !== $problems) {
+            throw new BuildFailed($problems);
+        }
     }
 
     /**

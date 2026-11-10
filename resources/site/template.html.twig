@@ -1,5 +1,8 @@
 {% extends 'layout.html.twig' %}
 
+{# A template's name, linked to its page when the catalog has one. #}
+{% macro template_link(name, names, root) %}{% if name in names %}<a href="{{ root }}templates/{{ name }}/">{{ name }}</a>{% else %}{{ name }}{% endif %}{% endmacro %}
+
 {% block description %}{{ page.description ?: page.label }}{% endblock %}
 
 {% block body %}
@@ -20,6 +23,13 @@
 {% endif %}
 
 <pre><code>symfony console metadata:template:install {{ page.name }}{{ page.removed or page.yanked ? '@' ~ page.version : '' }}</code></pre>
+
+{% if page.requires is not empty %}
+<p>Requires {% for name, constraint in page.requires %}{{ _self.template_link(name, names, root) }} <code>{{ constraint }}</code>{% if not loop.last %}, {% endif %}{% endfor %}: an install brings what is missing along.</p>
+{% endif %}
+{% if page.requiredBy is not empty %}
+<p>Required by {% for name in page.requiredBy %}{{ _self.template_link(name, names, root) }}{% if not loop.last %}, {% endif %}{% endfor %}.</p>
+{% endif %}
 
 {% if page.readme is not null %}
 <div class="readme">{{ page.readme|raw }}</div>
@@ -82,7 +92,7 @@
     {% for version in page.versions %}
         <tr>
             <td>{{ version.version }}{% if version.yanked %} <span class="badge warn">yanked</span>{% endif %}</td>
-            <td>{% for name, constraint in version.requires %}<code>{{ name }} {{ constraint }}</code>{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+            <td>{% for name, constraint in version.requires %}{% if name == 'format' %}<code>{{ name }} {{ constraint }}</code>{% else %}{{ _self.template_link(name, names, root) }} <code>{{ constraint }}</code>{% endif %}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
             <td><a href="{{ root }}{{ version.url }}">.tar.gz</a><div class="hash">sha256 {{ version.sha256 }}</div></td>
         </tr>
     {% endfor %}

@@ -82,6 +82,12 @@ The pull request must come from an owner of the vendor, and may only add version
   steps, needs a **major**. Seed records are not compared.
 - **The template is valid**: every document against its schema, ids, references, seeds and
   files, as metadata-driven checks them.
+- **The templates it requires are published here** (`spec.requires`), each in a version that
+  fits its constraint and isn't yanked. The version is checked against the highest one each
+  constraint allows, as an installation would take it: its references to their objects and
+  fields, its seeds' references to their records. A template can't require one published in
+  the same pull request: publish the required one first. Nor may it close a cycle (`These
+  templates would require each other: …`).
 - **20 MB at most** per version, files of the seeds included. No symbolic links.
 
 ### 3. Review
