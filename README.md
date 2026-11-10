@@ -146,7 +146,7 @@ the key.
 ## Checking locally
 
 You need PHP 8.4 and Composer; the tools use
-[`fedale/template-format`](https://packagist.org/packages/fedale/template-format), from
+[`fedale/metadata-driven-template-format`](https://packagist.org/packages/fedale/metadata-driven-template-format), from
 Packagist:
 
 ```bash

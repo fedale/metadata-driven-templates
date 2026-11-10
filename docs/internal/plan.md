@@ -22,7 +22,7 @@ Status: **C1, C2, C3 and C4 done** (2026-11-08), all merged into `main`.
   request's author; organizations since 2026-11-08, through their public members (C4).
   Teams are not supported.
 - Repository: `fedale/metadata-driven-templates`; tools in PHP 8.4 (`Fedale\TemplateCatalog`,
-  `symfony/console`, `symfony/process`), on `fedale/template-format`.
+  `symfony/console`, `symfony/process`), on `fedale/metadata-driven-template-format`.
 
 ## Phases
 
